@@ -34,7 +34,7 @@ body {
 .app {
   max-width: 720px;
   margin: 0 auto;
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
 }
@@ -60,7 +60,10 @@ body {
 .app-main {
   flex: 1;
   padding: 12px;
-  overflow-y: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 /* ===== 状态栏（第一行：角色信息）===== */
@@ -241,6 +244,10 @@ body {
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 .tab-bar {
@@ -291,8 +298,9 @@ body {
 }
 
 .tab-content {
-  max-height: 480px;
+  flex: 1;
   overflow-y: auto;
+  min-height: 0;
 }
 
 /* ===== 卡牌列表（按境界分组）===== */

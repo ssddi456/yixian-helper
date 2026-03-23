@@ -196,11 +196,46 @@ function pushCurrentState(force = false) {
 }
 
 /**
+ * 确保游戏目录下存在 developer.json 且 enableDebugMode 已开启。
+ * 游戏的 DeveloperConfigManager 会读取此文件，开启后才会输出完整的对局日志。
+ */
+function ensureDeveloperConfig(gamePath: string) {
+  const configPath = path.join(gamePath, "developer.json");
+  const requiredConfig = { enableDebugMode: true };
+
+  try {
+    if (fs.existsSync(configPath)) {
+      const existing = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+      if (existing.enableDebugMode === true) {
+        console.log("[LogWatcher] developer.json 已存在，enableDebugMode 已开启");
+        return;
+      }
+      // enableDebugMode 未开启，合并写入
+      const merged = { ...existing, ...requiredConfig };
+      fs.writeFileSync(configPath, JSON.stringify(merged, null, 2), "utf-8");
+      console.log("[LogWatcher] developer.json 已更新：enableDebugMode 设为 true");
+    } else {
+      // 确保目录存在
+      if (!fs.existsSync(gamePath)) {
+        fs.mkdirSync(gamePath, { recursive: true });
+      }
+      fs.writeFileSync(configPath, JSON.stringify(requiredConfig, null, 2), "utf-8");
+      console.log(`[LogWatcher] 已创建 developer.json: ${configPath}`);
+    }
+  } catch (e) {
+    console.warn("[LogWatcher] 写入 developer.json 失败:", e);
+  }
+}
+
+/**
  * 启动日志文件监听
  */
 export function startLogWatcher(broadcastFn: BroadcastFn) {
   broadcast = broadcastFn;
   const gamePath = getGamePath();
+
+  // 确保 developer.json 存在且 enableDebugMode 已开启（游戏依赖此开关输出详细日志）
+  ensureDeveloperConfig(gamePath);
 
   console.log(`[LogWatcher] 监听游戏路径: ${gamePath}`);
 
