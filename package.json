@@ -1,0 +1,32 @@
+{
+  "name": "yixian-helper",
+  "version": "1.0.0",
+  "private": true,
+  "description": "弈仙牌对局流派分析辅助工具",
+  "scripts": {
+    "client:dev": "rspack serve",
+    "client:build": "rspack build",
+    "server:dev": "bun run server/index.ts",
+    "server:build": "bun build server/index.ts --target=bun-windows-x64 --compile --outfile dist-server/yixian-helper",
+    "start": "concurrently \"bun run server/index.ts\" \"rspack serve\"",
+    "build": "concurrently \"npm run server:build\" \"npm run client:build\""
+  },
+  "dependencies": {
+    "chokidar": "^4.0.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@rspack/cli": "^1.7.9",
+    "@rspack/core": "^1.7.9",
+    "@rspack/plugin-react-refresh": "^1.4.1",
+    "@types/bun": "^1.3.11",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@types/ws": "^8.5.13",
+    "concurrently": "^9.1.2",
+    "react-refresh": "^0.14.2",
+    "typescript": "^5.7.3"
+  }
+}

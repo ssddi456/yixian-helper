@@ -1,0 +1,551 @@
+/* ===== 全局样式 ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg-primary: #0f0f13;
+  --bg-secondary: #1a1a22;
+  --bg-card: #22222e;
+  --bg-card-hover: #2a2a38;
+  --text-primary: #e8e8ec;
+  --text-secondary: #8888a0;
+  --text-muted: #555568;
+  --accent: #6c5ce7;
+  --accent-light: #a29bfe;
+  --border: #2a2a38;
+  --green: #00b894;
+  --orange: #fdcb6e;
+  --red: #e17055;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ===== 应用布局 ===== */
+.app {
+  max-width: 720px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.app-header h1 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent-light);
+  letter-spacing: 1px;
+}
+
+.app-main {
+  flex: 1;
+  padding: 12px;
+  overflow-y: auto;
+}
+
+/* ===== 状态栏（第一行：角色信息）===== */
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  padding: 8px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.status-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-text {
+  color: var(--text-secondary);
+}
+
+.player-name {
+  color: var(--accent-light);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.info-divider {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.player-sect {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.player-sidejobs {
+  color: var(--orange);
+  font-weight: 500;
+}
+
+.player-phase {
+  color: var(--green);
+  font-weight: 600;
+}
+
+.status-connection {
+  color: var(--text-muted);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+/* ===== 等待界面 ===== */
+.waiting-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.waiting-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.waiting-text {
+  font-size: 16px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.waiting-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ===== 面板通用 ===== */
+.panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  padding-left: 4px;
+}
+
+/* ===== 卡牌标签 ===== */
+.card-section,
+.guide-cards-section {
+  margin-top: 6px;
+}
+
+.section-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.card-sequence {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.seq-card {
+  display: flex;
+  align-items: center;
+  padding: 3px 8px;
+  font-size: 12px;
+  gap: 8px;
+}
+
+.seq-card.owned {
+  background: rgba(0, 184, 148, 0.1);
+  color: var(--green);
+}
+
+.seq-card.missing {
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-muted);
+}
+
+.seq-index {
+  min-width: 18px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.seq-name {
+  flex: 1;
+}
+
+.seq-status {
+  font-size: 11px;
+  font-weight: 600;
+  min-width: 14px;
+  text-align: center;
+}
+
+.seq-card.owned .seq-status {
+  color: var(--green);
+}
+
+.seq-card.missing .seq-status {
+  color: var(--text-muted);
+  opacity: 0.4;
+}
+
+/* ===== Tab 切换 ===== */
+.card-tabs-container {
+  margin-top: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.tab-bar {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-bottom: 2px solid transparent;
+  font-family: inherit;
+}
+
+.tab-btn:hover {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.tab-btn.active {
+  color: var(--accent-light);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
+.tab-count {
+  font-size: 11px;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+}
+
+.tab-btn.active .tab-count {
+  background: rgba(108, 92, 231, 0.2);
+  color: var(--accent-light);
+}
+
+.tab-content {
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+/* ===== 卡牌列表（按境界分组）===== */
+.card-list-grouped {
+  padding: 0;
+}
+
+.card-list-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.phase-nav {
+  display: flex;
+  gap: 4px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg-card);
+  z-index: 1;
+}
+
+.phase-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.phase-nav-btn:hover {
+  background: rgba(108, 92, 231, 0.12);
+  border-color: var(--accent);
+  color: var(--accent-light);
+}
+
+.phase-nav-count {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.phase-group {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.phase-group:last-child {
+  border-bottom: none;
+}
+
+.phase-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  position: sticky;
+  top: 36px;
+  z-index: 1;
+}
+
+.phase-group-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-light);
+}
+
+.phase-group-count {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.card-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 2px 8px 6px;
+}
+
+.card-item {
+  padding: 4px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.card-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.card-item-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.card-name {
+  color: var(--text-primary);
+  flex: 1;
+  min-width: 0;
+}
+
+.card-badge {
+  font-size: 10px;
+  padding: 0 4px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  line-height: 16px;
+}
+
+.card-badge.sect {
+  background: rgba(108, 92, 231, 0.12);
+  color: var(--accent-light);
+}
+
+.card-badge.sidejob {
+  background: rgba(253, 203, 110, 0.15);
+  color: var(--orange);
+}
+
+.card-badge.character {
+  background: rgba(0, 184, 148, 0.12);
+  color: var(--green);
+}
+
+.card-count {
+  color: var(--accent-light);
+  font-weight: 600;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.card-effect {
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-top: 1px;
+  padding-left: 2px;
+  white-space: pre-line;
+}
+
+/* ===== 牌组推荐面板 ===== */
+.deck-guide-panel {
+  padding: 8px;
+}
+
+.deck-guide-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.deck-guide-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  transition: background 0.15s;
+}
+
+.deck-guide-card:hover {
+  background: var(--bg-card-hover);
+}
+
+.deck-guide-card.high {
+  border-left: 3px solid var(--green);
+}
+
+.deck-guide-card.medium {
+  border-left: 3px solid var(--orange);
+}
+
+.deck-guide-card.low {
+  border-left: 3px solid var(--text-muted);
+}
+
+.deck-guide-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.deck-guide-rank {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-light);
+  min-width: 20px;
+}
+
+.deck-guide-title {
+  font-weight: 600;
+  font-size: 14px;
+  flex: 1;
+}
+
+.pro-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  background: rgba(253, 203, 110, 0.2);
+  color: var(--orange);
+  border: 1px solid rgba(253, 203, 110, 0.3);
+}
+
+.match-count {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.similarity-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.deck-guide-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.phase-advice {
+  margin-top: 6px;
+  padding: 6px 8px;
+  background: rgba(108, 92, 231, 0.08);
+  border-radius: 4px;
+}
+
+.advice-text {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.advice-text + .advice-text {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
