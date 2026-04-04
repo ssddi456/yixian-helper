@@ -100,3 +100,7 @@ npx rspack build           # 输出到 dist/，后端 HTTP 服务器直接提供
 
 - **Windows**: `%USERPROFILE%\AppData\LocalLow\DarkSunStudio\YiXianPai\`
 - **macOS**: `~/Library/Containers/com.darksun.yixianpai/`
+
+## 游戏安装路径
+
+- **Windows**: `G:\SteamLibrary\steamapps\common\弈仙牌`

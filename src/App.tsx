@@ -2,13 +2,15 @@ import React, { useState } from "react";
 import { useWebSocket } from "./hooks/useWebSocket";
 import DeckGuidePanel from "./components/DeckGuidePanel";
 import CardList from "./components/CardList";
+import BattleSimPanel from "./components/BattleSimPanel";
+import CounterPanel from "./components/CounterPanel";
 import StatusBar from "./components/StatusBar";
 import "./App.css";
 
-type TabKey = "guide" | "hand" | "deck";
+type TabKey = "guide" | "hand" | "deck" | "sim" | "counter";
 
 const App: React.FC = () => {
-  const { connected, gameStatus, deckAnalysis } = useWebSocket();
+  const { connected, gameStatus, deckAnalysis, battleResult, sendMessage } = useWebSocket();
   const [activeTab, setActiveTab] = useState<TabKey>("guide");
 
   return (
@@ -17,7 +19,7 @@ const App: React.FC = () => {
         <h1>弈仙牌 · 对局辅助</h1>
       </header>
 
-      <StatusBar connected={connected} gameStatus={gameStatus} />
+      <StatusBar connected={connected} gameStatus={gameStatus} onSendMessage={sendMessage} />
 
       <main className="app-main">
         {gameStatus.status === "in_game" && deckAnalysis ? (
@@ -44,6 +46,18 @@ const App: React.FC = () => {
                 牌库消耗
                 <span className="tab-count">{Object.keys(deckAnalysis.deckCards).length}</span>
               </button>
+              <button
+                className={`tab-btn ${activeTab === "sim" ? "active" : ""}`}
+                onClick={() => setActiveTab("sim")}
+              >
+                战斗模拟
+              </button>
+              <button
+                className={`tab-btn ${activeTab === "counter" ? "active" : ""}`}
+                onClick={() => setActiveTab("counter")}
+              >
+                克制关系
+              </button>
             </div>
             <div className="tab-content">
               {activeTab === "guide" && (
@@ -54,6 +68,19 @@ const App: React.FC = () => {
               )}
               {activeTab === "deck" && (
                 <CardList cards={deckAnalysis.deckCards} />
+              )}
+              {activeTab === "sim" && (
+                <BattleSimPanel
+                  handCards={deckAnalysis.handCards}
+                  phase={gameStatus.player?.phase || 1}
+                  simulation={battleResult?.battleSimulation ?? null}
+                  onSimulate={(selectedCards) => sendMessage({ type: "simulate_battle", data: { selectedCards } })}
+                />
+              )}
+              {activeTab === "counter" && (
+                battleResult?.counterAnalysis
+                  ? <CounterPanel analysis={battleResult.counterAnalysis} />
+                  : <div className="card-list-empty">请先在「战斗模拟」中选择卡牌并模拟</div>
               )}
             </div>
           </div>

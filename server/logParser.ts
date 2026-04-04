@@ -82,29 +82,40 @@ export function calculateDeckCards(
 export function calculateHandCards(
   operations: CardOperation[]
 ): Record<string, CardCount> {
-  const hand: Record<string, number> = {};
+  const hand: Record<string, { count: number; rarity: number }> = {};
 
   for (const op of operations) {
     if (op.operation === 0 && op.cards) {
       for (const card of op.cards) {
-        if (card.name) hand[card.name] = (hand[card.name] || 0) + 1;
+        if (card.name) {
+          if (!hand[card.name]) hand[card.name] = { count: 0, rarity: card.rarity || 0 };
+          hand[card.name].count += 1;
+          hand[card.name].rarity = card.rarity || hand[card.name].rarity;
+        }
       }
     }
     if (op.operation === 1) {
-      if (op.srcCard.name)
-        hand[op.srcCard.name] = (hand[op.srcCard.name] || 0) - 1;
-      if (op.dstCard.name)
-        hand[op.dstCard.name] = (hand[op.dstCard.name] || 0) + 1;
+      if (op.srcCard.name) {
+        if (!hand[op.srcCard.name]) hand[op.srcCard.name] = { count: 0, rarity: 0 };
+        hand[op.srcCard.name].count -= 1;
+      }
+      if (op.dstCard.name) {
+        if (!hand[op.dstCard.name]) hand[op.dstCard.name] = { count: 0, rarity: op.dstCard.rarity || 0 };
+        hand[op.dstCard.name].count += 1;
+        hand[op.dstCard.name].rarity = op.dstCard.rarity || hand[op.dstCard.name].rarity;
+      }
     }
     if (op.operation === 2) {
-      if (op.srcCard.name)
-        hand[op.srcCard.name] = (hand[op.srcCard.name] || 0) - 1;
+      if (op.srcCard.name) {
+        if (!hand[op.srcCard.name]) hand[op.srcCard.name] = { count: 0, rarity: 0 };
+        hand[op.srcCard.name].count -= 1;
+      }
     }
   }
 
   const result: Record<string, CardCount> = {};
-  for (const [name, count] of Object.entries(hand)) {
-    if (count > 0) result[name] = { count };
+  for (const [name, info] of Object.entries(hand)) {
+    if (info.count > 0) result[name] = { count: info.count, rarity: info.rarity };
   }
   return result;
 }
@@ -152,7 +163,7 @@ export function normalizeCardName(name: string): string {
 /**
  * 角色英文ID到中文名的映射
  */
-const CHARACTER_NAMES: Record<string, string> = {
+export const CHARACTER_NAMES: Record<string, string> = {
   MuYifeng: "慕一峰",
   YanXue: "燕雪",
   LongYao: "龙瑶",
@@ -180,7 +191,7 @@ const CHARACTER_NAMES: Record<string, string> = {
 /**
  * 角色所属门派映射
  */
-const CHARACTER_SECTS: Record<string, string> = {
+export const CHARACTER_SECTS: Record<string, string> = {
   MuYifeng: "cloud-spirit",
   YanXue: "cloud-spirit",
   LongYao: "cloud-spirit",
@@ -263,6 +274,22 @@ export function inferCharacterFromCards(
   return null;
 }
 
+export interface CardStats {
+  attack?: number;
+  randomAttack?: number;
+  attackCount?: number;
+  def?: number;
+  randomDef?: number;
+  anima?: number;
+  jianYi?: number;
+  guaXiang?: number;
+  physique?: number;
+  hpCost?: number;
+  chargeQi?: number;
+  actionAgain?: boolean;
+  otherParams?: number[];
+}
+
 export interface CardDataEntry {
   name: string;
   phase: number;
@@ -270,6 +297,7 @@ export interface CardDataEntry {
   type: string;       // "sect" | "side-job" | "character" | ""
   effect: string;
   effectRaw: string;
+  stats?: Record<string, CardStats>;  // rarity → numeric stats
 }
 
 // 中文角色名 → 英文ID 的反向映射

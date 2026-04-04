@@ -2,8 +2,10 @@ import { defineConfig } from "@rspack/cli";
 import { rspack } from "@rspack/core";
 import RefreshPlugin from "@rspack/plugin-react-refresh";
 import path from "path";
+import fs from "fs";
 
 const isDev = process.env.NODE_ENV === "development";
+const pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, "package.json"), "utf-8"));
 
 export default defineConfig({
   entry: {
@@ -61,6 +63,9 @@ export default defineConfig({
   plugins: [
     new rspack.HtmlRspackPlugin({
       template: "./public/index.html",
+    }),
+    new rspack.DefinePlugin({
+      __APP_VERSION__: JSON.stringify(pkg.version),
     }),
     isDev && new RefreshPlugin(),
   ].filter(Boolean),

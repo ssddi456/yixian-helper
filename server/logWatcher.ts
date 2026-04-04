@@ -10,10 +10,14 @@ import {
   isInGame,
   readPlayerFromBattleLog,
   refinePlayerFromCards,
+  CHARACTER_NAMES,
+  CHARACTER_SECTS,
 } from "./logParser";
 import { analyzeArchetypes } from "./archetypeAnalyzer";
 import { loadDeckGuides, recommendDeckGuides } from "./deckGuideRecommender";
-import { CardLibEntry, DeckAnalysis, GameStatus, WSMessage, PlayerInfo } from "./types";
+import { simulateBattle } from "./battleSimulator";
+import { analyzeCounters, inferDeckTraits } from "./counterMatrix";
+import { CardLibEntry, CardCount, DeckAnalysis, FullAnalysis, GameStatus, WSMessage, PlayerInfo, PlayerOverride, BattleResultData } from "./types";
 
 // 加载卡牌库
 const cardLibPath = path.join(__dirname, "..", "src", "data", "card_lib.json");
@@ -46,11 +50,13 @@ type BroadcastFn = (msg: WSMessage) => void;
 
 let broadcast: BroadcastFn = () => {};
 let watcher: ReturnType<typeof watch> | null = null;
+let playerOverride: PlayerOverride | null = null;
+let currentRawHandCards: Record<string, CardCount> = {};
 
 // 文件变更追踪：记录上次处理时的 mtime
 const fileMtimes: Record<string, number> = {};
 // 缓存上次处理结果，避免无变更时重复计算
-let cachedResult: { status: GameStatus; analysis: DeckAnalysis | null } | null = null;
+let cachedResult: { status: GameStatus; analysis: FullAnalysis | null } | null = null;
 
 /**
  * 检查监听文件是否有更新（比较 mtime）
@@ -123,9 +129,9 @@ function processGameState(force = false): { status: GameStatus; analysis: DeckAn
     const handCards = calculateHandCards(operations);
     const deckCards = calculateDeckCards(operations);
 
-    // 给卡牌补充境界、分类、效果信息
-    const enrichWithPhase = (cards: Record<string, { count: number }>) => {
-      const result: Record<string, { count: number; phase?: number; category?: string; effect?: string }> = {};
+    // 给卡牌补充境界、分类、效果、稀有度信息
+    const enrichWithPhase = (cards: Record<string, { count: number; rarity?: number }>) => {
+      const result: Record<string, CardCount> = {};
       for (const [name, info] of Object.entries(cards)) {
         const cd = cardData[name];
         const libEntry = cardLib[name];
@@ -134,6 +140,7 @@ function processGameState(force = false): { status: GameStatus; analysis: DeckAn
           phase: cd?.phase || libEntry?.phase,
           category: cd?.category || libEntry?.category,
           effect: cd?.effect,
+          rarity: (info as any).rarity,
         };
       }
       return result;
@@ -141,10 +148,28 @@ function processGameState(force = false): { status: GameStatus; analysis: DeckAn
     const handCardsEnriched = enrichWithPhase(handCards);
     const deckCardsEnriched = enrichWithPhase(deckCards);
 
+    // 保存原始手牌供战斗模拟使用
+    currentRawHandCards = handCards;
+
     // 读取角色信息：BattleLog 为基础，手牌信息修正门派/副职/角色名/境界
     const allCards = { ...handCards, ...deckCards };
     const basePlayer = readPlayerFromBattleLog(gamePath);
-    const player = refinePlayerFromCards(basePlayer, allCards, cardData, cardLib);
+    let player = refinePlayerFromCards(basePlayer, allCards, cardData, cardLib);
+
+    // 应用手动修正
+    if (playerOverride) {
+      if (playerOverride.character) {
+        player.character = playerOverride.character;
+        player.characterName = CHARACTER_NAMES[playerOverride.character] || playerOverride.character;
+        player.sect = CHARACTER_SECTS[playerOverride.character] || player.sect;
+      }
+      if (playerOverride.phase !== undefined) {
+        player.phase = playerOverride.phase;
+      }
+      if (playerOverride.sideJobs !== undefined) {
+        player.sideJobs = playerOverride.sideJobs;
+      }
+    }
 
     // 流派分析
     const archetypeMatches = analyzeArchetypes(handCards, deckCards, cardLib);
@@ -154,7 +179,7 @@ function processGameState(force = false): { status: GameStatus; analysis: DeckAn
     // 牌组指南推荐（仅对比当前手牌）
     const deckRecommendations = recommendDeckGuides(handCards, player.sect, player.phase, player.characterName);
 
-    const analysis: DeckAnalysis = {
+    const analysis: FullAnalysis = {
       handCards: handCardsEnriched,
       deckCards: deckCardsEnriched,
       archetypeMatches,
@@ -293,4 +318,39 @@ export function getCurrentState(): WSMessage[] {
 
 export function stopLogWatcher() {
   watcher?.close();
+}
+
+/**
+ * 手动修正当前角色信息
+ */
+export function setPlayerOverride(override: PlayerOverride | null) {
+  playerOverride = override;
+  console.log("[LogWatcher] 角色手动修正:", override ? JSON.stringify(override) : "已清除");
+  // 清除缓存，强制重新分析
+  cachedResult = null;
+  pushCurrentState(true);
+}
+
+/**
+ * 处理战斗模拟请求：根据用户选择的上阵卡牌执行模拟
+ */
+export function handleSimulateBattle(
+  selectedCards: Record<string, number>,
+): BattleResultData {
+  // 构建模拟用的手牌（从原始手牌获取 rarity）
+  const simCards: Record<string, CardCount> = {};
+  for (const [name, count] of Object.entries(selectedCards)) {
+    if (count > 0) {
+      const raw = currentRawHandCards[name];
+      simCards[name] = { count, rarity: raw?.rarity ?? 0 };
+    }
+  }
+
+  const battleSimulation = simulateBattle(simCards, cardData);
+  const deckTraits = inferDeckTraits(battleSimulation);
+  const counterAnalysis = analyzeCounters(deckTraits);
+
+  console.log(`[LogWatcher] 战斗模拟: ${Object.entries(selectedCards).map(([n, c]) => `${n}×${c}`).join(", ")}`);
+
+  return { battleSimulation, counterAnalysis };
 }

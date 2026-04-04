@@ -14,6 +14,7 @@ export interface CardCount {
   phase?: number;
   category?: string;
   effect?: string;
+  rarity?: number;
 }
 
 export interface HandCard {
@@ -90,8 +91,94 @@ export interface DeckAnalysis {
   deckRecommendations: DeckRecommendation[];
 }
 
+// ===== 战斗模拟类型 =====
+export interface CardEffect {
+  type: string;
+  subType: string;
+  target: "self" | "enemy";
+  description: string;
+  value?: number;
+}
+
+export interface BattleState {
+  selfBuffs: Record<string, number>;
+  enemyDebuffs: Record<string, number>;
+  attackActions: number;
+  totalHits: number;
+  defenseActions: number;
+  healActions: number;
+  spiritGains: number;
+  physiqueGains: number;
+  totalAttackDamage: number;
+  totalDefense: number;
+  totalPhysique: number;
+  totalSpirit: number;
+  totalJianYi: number;
+  totalGuaXiang: number;
+  totalHpCost: number;
+}
+
+export interface SimulationStep {
+  cardName: string;
+  cardPhase: number;
+  effects: CardEffect[];
+  stateAfter: BattleState;
+}
+
+export interface RoundSummary {
+  steps: SimulationStep[];
+  finalState: BattleState;
+}
+
+export interface BattleSimulation {
+  round1: RoundSummary;
+  round2: RoundSummary;
+  handCardNames: string[];
+}
+
+// ===== 克制关系类型 =====
+export interface CounterRelation {
+  id: string;
+  mechanism: string;
+  description: string;
+  counters: string;
+  examples: string[];
+  icon: string;
+}
+
+export interface CounterAnalysis {
+  relations: CounterRelation[];
+  deckStrengths: string[];
+  deckWeaknesses: string[];
+}
+
+// ===== 完整分析（含模拟和克制）=====
+export interface FullAnalysis extends DeckAnalysis {
+  // battleSimulation 和 counterAnalysis 改为按需模拟
+}
+
+// ===== 战斗模拟结果 =====
+export interface BattleResultData {
+  battleSimulation: BattleSimulation;
+  counterAnalysis: CounterAnalysis;
+}
+
+// 客户端→服务端消息
+export interface PlayerOverride {
+  character?: string;
+  phase?: number;
+  sideJobs?: string[];
+}
+
 // WebSocket 消息类型
 export type WSMessage =
   | { type: "game_status"; data: GameStatus }
-  | { type: "deck_analysis"; data: DeckAnalysis }
+  | { type: "deck_analysis"; data: FullAnalysis }
+  | { type: "battle_result"; data: BattleResultData }
+  | { type: "version"; data: { version: string } }
   | { type: "error"; data: { message: string } };
+
+export type ClientWSMessage =
+  | { type: "set_player_override"; data: PlayerOverride }
+  | { type: "clear_player_override" }
+  | { type: "simulate_battle"; data: { selectedCards: Record<string, number> } };

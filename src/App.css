@@ -128,6 +128,156 @@ body {
   flex-shrink: 0;
 }
 
+/* ===== 角色修正按钮 ===== */
+.edit-trigger-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 4px;
+  line-height: 1;
+  transition: all 0.2s;
+}
+
+.edit-trigger-btn:hover {
+  color: var(--accent-light);
+  border-color: var(--accent);
+  background: rgba(108, 92, 231, 0.1);
+}
+
+/* ===== 角色修正编辑表单 ===== */
+.status-bar-editing {
+  flex-direction: column;
+  align-items: stretch;
+  padding: 10px 16px;
+}
+
+.status-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.edit-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.edit-row label {
+  color: var(--text-secondary);
+  font-size: 12px;
+  min-width: 36px;
+  flex-shrink: 0;
+}
+
+.edit-row select {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+}
+
+.edit-row select:focus {
+  border-color: var(--accent);
+}
+
+.edit-sect-hint {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.edit-phase-btns,
+.edit-sidejob-btns {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.edit-phase-btn,
+.edit-sidejob-btn {
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.edit-phase-btn:hover,
+.edit-sidejob-btn:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.edit-phase-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.edit-sidejob-btn.active {
+  background: rgba(253, 203, 110, 0.15);
+  color: var(--orange);
+  border-color: var(--orange);
+}
+
+.edit-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.edit-save-btn,
+.edit-clear-btn,
+.edit-cancel-btn {
+  padding: 3px 14px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+
+.edit-save-btn {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.edit-save-btn:hover {
+  background: var(--accent-light);
+}
+
+.edit-clear-btn {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.edit-clear-btn:hover {
+  color: var(--orange);
+  border-color: var(--orange);
+}
+
+.edit-cancel-btn {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.edit-cancel-btn:hover {
+  color: var(--text-secondary);
+  border-color: var(--text-muted);
+}
+
 /* ===== 等待界面 ===== */
 .waiting-container {
   display: flex;
@@ -556,4 +706,523 @@ body {
   margin-top: 4px;
   padding-top: 4px;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ===== 战斗模拟面板 ===== */
+.sim-panel {
+  padding: 8px;
+}
+
+/* ===== 卡牌选择器 ===== */
+.card-picker {
+  margin-bottom: 12px;
+}
+
+.picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.picker-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.picker-limit {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-light);
+}
+
+.picker-phase-hint {
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-left: 4px;
+  font-size: 12px;
+}
+
+/* 上阵槽位 */
+.picker-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.picker-slot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  min-height: 30px;
+  transition: all 0.15s;
+}
+
+.picker-slot.filled {
+  border-color: var(--accent);
+  background: rgba(108, 92, 231, 0.08);
+  cursor: pointer;
+}
+
+.picker-slot.filled:hover {
+  background: rgba(225, 112, 85, 0.1);
+  border-color: var(--red);
+}
+
+.picker-slot.filled:hover .slot-remove {
+  opacity: 1;
+}
+
+.picker-slot.empty {
+  border-style: dashed;
+  opacity: 0.4;
+}
+
+.picker-slot.next {
+  border-color: var(--accent);
+  opacity: 0.7;
+  border-style: dashed;
+}
+
+.slot-index {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.picker-slot.filled .slot-index {
+  background: var(--accent);
+  color: #fff;
+}
+
+.slot-name {
+  font-size: 13px;
+  color: var(--text-primary);
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slot-phase {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+  padding: 0 4px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.slot-empty-text {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.slot-remove {
+  font-size: 14px;
+  color: var(--red);
+  opacity: 0;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+
+/* 操作按钮 */
+.picker-actions {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.picker-btn {
+  padding: 3px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  transition: all 0.15s;
+}
+
+.picker-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.picker-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.picker-sim-btn {
+  margin-left: auto;
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.picker-sim-btn:hover:not(:disabled) {
+  background: var(--accent-light);
+}
+
+/* 手牌候选列表 */
+.picker-hand {
+  margin-top: 4px;
+}
+
+.picker-hand-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.picker-hand-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.picker-hand-card {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.picker-hand-card:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: rgba(108, 92, 231, 0.1);
+}
+
+.picker-hand-card.exhausted {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.picker-hc-name {
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.picker-hc-phase {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.picker-hc-remain {
+  font-size: 11px;
+  color: var(--accent-light);
+  font-weight: 600;
+}
+
+.sim-round-toggle {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.sim-toggle-btn {
+  flex: 1;
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.sim-toggle-btn:hover {
+  background: rgba(108, 92, 231, 0.08);
+}
+
+.sim-toggle-btn.active {
+  background: rgba(108, 92, 231, 0.15);
+  border-color: var(--accent);
+  color: var(--accent-light);
+  font-weight: 600;
+}
+
+.sim-round-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 4px 0;
+  margin-bottom: 4px;
+}
+
+.sim-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.sim-step {
+  display: flex;
+  align-items: flex-start;
+  padding: 4px 8px;
+  gap: 8px;
+  background: var(--bg-secondary);
+}
+
+.sim-step:hover {
+  background: var(--bg-card-hover);
+}
+
+.sim-step-index {
+  min-width: 18px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding-top: 2px;
+}
+
+.sim-step-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.sim-step-card {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.sim-card-name {
+  font-size: 12px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.sim-card-phase {
+  font-size: 10px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: rgba(108, 92, 231, 0.12);
+  color: var(--accent-light);
+}
+
+.sim-step-effects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.sim-effect-tag {
+  font-size: 10px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.04);
+  cursor: default;
+}
+
+/* ===== 模拟汇总 ===== */
+.sim-summary {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-top: 8px;
+}
+
+.sim-summary-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-light);
+  margin-bottom: 6px;
+}
+
+.sim-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.sim-stat {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+}
+
+.sim-stat-icon {
+  font-size: 12px;
+}
+
+.sim-stat-value {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.sim-stat-detail {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.sim-buffs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.sim-buff-label {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.sim-buff-tag {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+.sim-buff-tag.buff {
+  background: rgba(0, 184, 148, 0.12);
+  color: var(--green);
+}
+
+.sim-buff-tag.debuff {
+  background: rgba(225, 112, 85, 0.12);
+  color: var(--red);
+}
+
+/* ===== 克制关系面板 ===== */
+.counter-panel {
+  padding: 8px;
+}
+
+.counter-deck-analysis {
+  margin-bottom: 12px;
+}
+
+.counter-section {
+  margin-bottom: 8px;
+}
+
+.counter-section-label {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.counter-section-label.strength {
+  color: var(--green);
+}
+
+.counter-section-label.weakness {
+  color: var(--orange);
+}
+
+.counter-trait {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  margin-bottom: 2px;
+}
+
+.counter-trait.strength {
+  color: var(--green);
+  background: rgba(0, 184, 148, 0.08);
+}
+
+.counter-trait.weakness {
+  color: var(--orange);
+  background: rgba(253, 203, 110, 0.08);
+}
+
+.counter-matrix {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.counter-matrix-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding-left: 4px;
+}
+
+.counter-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.counter-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.counter-icon {
+  font-size: 14px;
+}
+
+.counter-mechanism {
+  font-weight: 600;
+  color: var(--accent-light);
+}
+
+.counter-arrow {
+  color: var(--text-muted);
+}
+
+.counter-target {
+  color: var(--red);
+  font-weight: 500;
+}
+
+.counter-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  line-height: 1.5;
+}
+
+.counter-examples {
+  padding-left: 4px;
+}
+
+.counter-example {
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.6;
 }

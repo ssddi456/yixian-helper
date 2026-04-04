@@ -14,6 +14,7 @@ export interface CardCount {
   phase?: number;       // 卡牌所属境界 (1-6)
   category?: string;    // 门派/副职分类
   effect?: string;      // 卡牌效果描述
+  rarity?: number;      // 卡牌稀有度 (0=普通, 1=稀有, 2=史诗)
 }
 
 export interface BattleLogCard {
@@ -118,7 +119,94 @@ export interface DeckAnalysis {
   deckRecommendations: DeckRecommendation[];
 }
 
+// ===== 战斗模拟类型 =====
+export interface CardEffect {
+  type: string;
+  subType: string;
+  target: "self" | "enemy";
+  description: string;
+  value?: number;       // numeric value of the effect
+}
+
+export interface BattleState {
+  selfBuffs: Record<string, number>;
+  enemyDebuffs: Record<string, number>;
+  attackActions: number;
+  totalHits: number;
+  defenseActions: number;
+  healActions: number;
+  spiritGains: number;
+  physiqueGains: number;
+  // Numeric totals from actual card stats
+  totalAttackDamage: number;   // 总攻击伤害
+  totalDefense: number;        // 总防御值
+  totalPhysique: number;       // 总体魄值
+  totalSpirit: number;         // 总灵气获取
+  totalJianYi: number;         // 总剑意值
+  totalGuaXiang: number;       // 总卦象值
+  totalHpCost: number;         // 总生命消耗
+}
+
+export interface SimulationStep {
+  cardName: string;
+  cardPhase: number;
+  effects: CardEffect[];
+  stateAfter: BattleState;
+}
+
+export interface RoundSummary {
+  steps: SimulationStep[];
+  finalState: BattleState;
+}
+
+export interface BattleSimulation {
+  round1: RoundSummary;
+  round2: RoundSummary;
+  handCardNames: string[];
+}
+
+// ===== 克制关系类型 =====
+export interface CounterRelation {
+  id: string;
+  mechanism: string;
+  description: string;
+  counters: string;
+  examples: string[];
+  icon: string;
+}
+
+export interface CounterAnalysis {
+  relations: CounterRelation[];
+  deckStrengths: string[];
+  deckWeaknesses: string[];
+}
+
+// ===== 完整分析（含模拟和克制）=====
+export interface FullAnalysis extends DeckAnalysis {
+  // battleSimulation 和 counterAnalysis 改为按需模拟，不再自动计算
+}
+
+// ===== 战斗模拟请求/响应 =====
+export interface BattleResultData {
+  battleSimulation: BattleSimulation;
+  counterAnalysis: CounterAnalysis;
+}
+
+// 客户端→服务端消息
+export interface PlayerOverride {
+  character?: string;       // 英文 ID，如 "YeMingming"
+  phase?: number;           // 境界 1-5
+  sideJobs?: string[];      // 副职列表
+}
+
 export type WSMessage =
   | { type: "game_status"; data: GameStatus }
-  | { type: "deck_analysis"; data: DeckAnalysis }
+  | { type: "deck_analysis"; data: FullAnalysis }
+  | { type: "battle_result"; data: BattleResultData }
+  | { type: "version"; data: { version: string } }
   | { type: "error"; data: { message: string } };
+
+export type ClientWSMessage =
+  | { type: "set_player_override"; data: PlayerOverride }
+  | { type: "clear_player_override" }
+  | { type: "simulate_battle"; data: { selectedCards: Record<string, number> } };

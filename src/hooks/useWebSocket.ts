@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import type { WSMessage, GameStatus, DeckAnalysis } from "../types";
+import type { WSMessage, GameStatus, FullAnalysis, ClientWSMessage, BattleResultData } from "../types";
 
 const WS_URL = "ws://localhost:12681";
 const RECONNECT_DELAY = 3000;
+
+declare const __APP_VERSION__: string;
+const CLIENT_VERSION = typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "dev";
 
 export function useWebSocket() {
   const [connected, setConnected] = useState(false);
@@ -10,7 +13,8 @@ export function useWebSocket() {
     inGame: false,
     status: "waiting",
   });
-  const [deckAnalysis, setDeckAnalysis] = useState<DeckAnalysis | null>(null);
+  const [deckAnalysis, setDeckAnalysis] = useState<FullAnalysis | null>(null);
+  const [battleResult, setBattleResult] = useState<BattleResultData | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<number | null>(null);
 
@@ -39,6 +43,17 @@ export function useWebSocket() {
               break;
             case "deck_analysis":
               setDeckAnalysis(msg.data);
+              setBattleResult(null); // 新的分析数据到达时清除旧模拟结果
+              break;
+            case "battle_result":
+              setBattleResult(msg.data);
+              break;
+            case "version":
+              if (CLIENT_VERSION !== "dev" && msg.data.version !== CLIENT_VERSION) {
+                console.log(`[WS] 版本不匹配: 客户端=${CLIENT_VERSION}, 服务端=${msg.data.version}，刷新页面`);
+                window.location.reload();
+                return;
+              }
               break;
             case "error":
               console.error("[WS] 服务器错误:", msg.data.message);
@@ -64,6 +79,12 @@ export function useWebSocket() {
     }
   }, []);
 
+  const sendMessage = useCallback((msg: ClientWSMessage) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify(msg));
+    }
+  }, []);
+
   useEffect(() => {
     connect();
     return () => {
@@ -72,5 +93,5 @@ export function useWebSocket() {
     };
   }, [connect]);
 
-  return { connected, gameStatus, deckAnalysis };
+  return { connected, gameStatus, deckAnalysis, battleResult, sendMessage };
 }
