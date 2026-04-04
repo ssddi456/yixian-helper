@@ -15,9 +15,7 @@ import {
 } from "./logParser";
 import { analyzeArchetypes } from "./archetypeAnalyzer";
 import { loadDeckGuides, recommendDeckGuides } from "./deckGuideRecommender";
-import { simulateBattle } from "./battleSimulator";
-import { analyzeCounters, inferDeckTraits } from "./counterMatrix";
-import { CardLibEntry, CardCount, DeckAnalysis, FullAnalysis, GameStatus, WSMessage, PlayerInfo, PlayerOverride, BattleResultData } from "./types";
+import { CardLibEntry, CardEntry, DeckAnalysis, FullAnalysis, GameStatus, WSMessage, PlayerOverride } from "./types";
 
 // 加载卡牌库
 const cardLibPath = path.join(__dirname, "..", "src", "data", "card_lib.json");
@@ -51,7 +49,7 @@ type BroadcastFn = (msg: WSMessage) => void;
 let broadcast: BroadcastFn = () => {};
 let watcher: ReturnType<typeof watch> | null = null;
 let playerOverride: PlayerOverride | null = null;
-let currentRawHandCards: Record<string, CardCount> = {};
+let currentRawHandCards: CardEntry[] = [];
 
 // 文件变更追踪：记录上次处理时的 mtime
 const fileMtimes: Record<string, number> = {};
@@ -127,32 +125,25 @@ function processGameState(force = false): { status: GameStatus; analysis: DeckAn
     }
 
     const handCards = calculateHandCards(operations);
-    const deckCards = calculateDeckCards(operations);
+    const deckCards = calculateDeckCards(operations, cardData);
 
-    // 给卡牌补充境界、分类、效果、稀有度信息
-    const enrichWithPhase = (cards: Record<string, { count: number; rarity?: number }>) => {
-      const result: Record<string, CardCount> = {};
-      for (const [name, info] of Object.entries(cards)) {
-        const cd = cardData[name];
-        const libEntry = cardLib[name];
-        result[name] = {
-          count: info.count,
-          phase: cd?.phase || libEntry?.phase,
-          category: cd?.category || libEntry?.category,
-          effect: cd?.effect,
-          rarity: (info as any).rarity,
-        };
-      }
-      return result;
-    };
-    const handCardsEnriched = enrichWithPhase(handCards);
-    const deckCardsEnriched = enrichWithPhase(deckCards);
+    // 给卡牌补充境界信息（phase），方便前端逐张展示
+    const enrichCards = (cards: CardEntry[]) =>
+      cards.map(card => {
+        const fullInfo = cardData[card.name] || cardLib[card.name];
+        
+        return fullInfo ? { ...fullInfo, ...card } : card;
+      });
+    const enrichedHandCards = enrichCards(handCards);
+
+    const handCardCounts = enrichedHandCards;
+    const deckCardCounts = deckCards;
 
     // 保存原始手牌供战斗模拟使用
-    currentRawHandCards = handCards;
+    currentRawHandCards = enrichedHandCards;
 
     // 读取角色信息：BattleLog 为基础，手牌信息修正门派/副职/角色名/境界
-    const allCards = { ...handCards, ...deckCards };
+    const allCards = [...enrichedHandCards];
     const basePlayer = readPlayerFromBattleLog(gamePath);
     let player = refinePlayerFromCards(basePlayer, allCards, cardData, cardLib);
 
@@ -172,16 +163,18 @@ function processGameState(force = false): { status: GameStatus; analysis: DeckAn
     }
 
     // 流派分析
-    const archetypeMatches = analyzeArchetypes(handCards, deckCards, cardLib);
+    const archetypeMatches = analyzeArchetypes(enrichedHandCards, cardLib);
 
-    console.log(`[LogWatcher] 状态更新: ${player.characterName || "未知"} (${player.sect}, ${player.phase}境界, 副职: ${player.sideJobs.join("/") || "无"}) 手牌${Object.keys(handCards).length}种 消耗${Object.keys(deckCards).length}种`);
+    console.log(`[LogWatcher] 状态更新: ${player.characterName || "未知"} (${player.sect}, ${player.phase}境界, 副职: ${player.sideJobs.join("/") || "无"}) 手牌${enrichedHandCards.length}张 消耗${deckCards.length}张`);
 
     // 牌组指南推荐（仅对比当前手牌）
-    const deckRecommendations = recommendDeckGuides(handCards, player.sect, player.phase, player.characterName);
+    const deckRecommendations = recommendDeckGuides(enrichedHandCards, player.sect, player.phase, player.characterName);
 
     const analysis: FullAnalysis = {
-      handCards: handCardsEnriched,
-      deckCards: deckCardsEnriched,
+      handCards: enrichedHandCards,
+      deckCards,
+      handCardCounts,
+      deckCardCounts,
       archetypeMatches,
       deckRecommendations,
     };
@@ -320,6 +313,10 @@ export function stopLogWatcher() {
   watcher?.close();
 }
 
+export function getCardData(): Record<string, CardDataEntry> {
+  return cardData;
+}
+
 /**
  * 手动修正当前角色信息
  */
@@ -329,28 +326,4 @@ export function setPlayerOverride(override: PlayerOverride | null) {
   // 清除缓存，强制重新分析
   cachedResult = null;
   pushCurrentState(true);
-}
-
-/**
- * 处理战斗模拟请求：根据用户选择的上阵卡牌执行模拟
- */
-export function handleSimulateBattle(
-  selectedCards: Record<string, number>,
-): BattleResultData {
-  // 构建模拟用的手牌（从原始手牌获取 rarity）
-  const simCards: Record<string, CardCount> = {};
-  for (const [name, count] of Object.entries(selectedCards)) {
-    if (count > 0) {
-      const raw = currentRawHandCards[name];
-      simCards[name] = { count, rarity: raw?.rarity ?? 0 };
-    }
-  }
-
-  const battleSimulation = simulateBattle(simCards, cardData);
-  const deckTraits = inferDeckTraits(battleSimulation);
-  const counterAnalysis = analyzeCounters(deckTraits);
-
-  console.log(`[LogWatcher] 战斗模拟: ${Object.entries(selectedCards).map(([n, c]) => `${n}×${c}`).join(", ")}`);
-
-  return { battleSimulation, counterAnalysis };
 }

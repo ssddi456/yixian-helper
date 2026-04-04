@@ -1,5 +1,5 @@
-import { CardCount, CardLibEntry, ArchetypeMatch } from "./types";
-import { ArchetypeDefinition, ARCHETYPES } from "./archetypes";
+import { CardEntry, CardLibEntry, ArchetypeDefinition, ArchetypeMatch, CardEntryFull } from "./types";
+import { ARCHETYPES } from "./archetypes";
 import { normalizeCardName } from "./logParser";
 
 /**
@@ -68,18 +68,14 @@ export function calculateArchetypeSimilarity(
  * 分析所有流派，返回按相似度降序排列的结果
  */
 export function analyzeArchetypes(
-  handCards: Record<string, CardCount>,
-  deckCards: Record<string, CardCount>,
+  handCards: CardEntry[],
   cardLib: Record<string, CardLibEntry>
 ): ArchetypeMatch[] {
   // 合并手牌和牌库消耗牌作为玩家当前拥有/使用的牌
   const allPlayerCards = new Set<string>();
 
-  for (const name of Object.keys(handCards)) {
-    allPlayerCards.add(name);
-  }
-  for (const name of Object.keys(deckCards)) {
-    allPlayerCards.add(name);
+  for (const card of handCards) {
+    allPlayerCards.add(card.name);
   }
 
   // 同时根据 card_lib 的 category 添加已知门派/副职牌
@@ -110,20 +106,20 @@ export function analyzeArchetypes(
  * 基于 card_lib 的 category 推断玩家可能的门派和副职
  */
 export function inferPlayerAffinities(
-  cards: Record<string, CardCount>,
+  cards: CardEntryFull[],
   cardLib: Record<string, CardLibEntry>
 ): { sect: string; sideJobs: string[] } {
   const sectCounts: Record<string, number> = {};
   const sideJobSet = new Set<string>();
 
-  for (const [name, info] of Object.entries(cards)) {
-    const normalized = normalizeCardName(name);
-    const entry = cardLib[name] || cardLib[normalized];
+  for (const card of cards) {
+    const normalized = normalizeCardName(card.name);
+    const entry = cardLib[card.name] || cardLib[normalized];
     if (!entry) continue;
 
     if (entry.type === "sect") {
       sectCounts[entry.category] =
-        (sectCounts[entry.category] || 0) + info.count;
+        (sectCounts[entry.category] || 0) + 1;
     }
     if (entry.type === "side-jobs") {
       sideJobSet.add(entry.category);

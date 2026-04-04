@@ -881,6 +881,72 @@ body {
   background: var(--accent-light);
 }
 
+.picker-recent-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-card));
+}
+
+/* 最近牌组列表 */
+.picker-recent {
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.picker-recent-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.picker-recent-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 10px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.12s;
+  font-size: 12px;
+}
+
+.picker-recent-item:last-child {
+  border-bottom: none;
+}
+
+.picker-recent-item:hover:not(.unavailable) {
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-card));
+}
+
+.picker-recent-item.unavailable {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.picker-recent-cards {
+  color: var(--text-primary);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.picker-recent-avail {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.picker-recent-avail.partial {
+  color: var(--orange);
+}
+
 /* 手牌候选列表 */
 .picker-hand {
   margin-top: 4px;
@@ -995,6 +1061,15 @@ body {
 
 .sim-step:hover {
   background: var(--bg-card-hover);
+}
+
+.sim-step-replay {
+  border-left: 2px solid var(--accent-light);
+  opacity: 0.85;
+}
+
+.sim-step-replay .sim-card-name {
+  font-style: italic;
 }
 
 .sim-step-index {

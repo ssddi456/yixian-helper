@@ -9,9 +9,9 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "outDir": "./dist-server",
-    "rootDir": "./server",
+    "rootDir": ".",
     "sourceMap": true
   },
-  "include": ["server/**/*"],
+  "include": ["server/**/*", "shared/**/*"],
   "exclude": ["node_modules"]
 }

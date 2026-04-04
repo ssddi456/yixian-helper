@@ -2,7 +2,8 @@ import { createServer } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import * as fs from "fs";
 import * as path from "path";
-import { startLogWatcher, getCurrentState, setPlayerOverride, handleSimulateBattle } from "./logWatcher";
+import { startLogWatcher, getCurrentState, setPlayerOverride } from "./logWatcher";
+import { handleSimulateBattle } from "./simulateBattleHandler";
 import { WSMessage, ClientWSMessage } from "./types";
 
 const PORT = 12680;

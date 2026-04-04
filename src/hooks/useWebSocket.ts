@@ -16,17 +16,22 @@ export function useWebSocket() {
   const [deckAnalysis, setDeckAnalysis] = useState<FullAnalysis | null>(null);
   const [battleResult, setBattleResult] = useState<BattleResultData | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const currentWsId = useRef<number>(0);
+  const pendingReconnect = useRef<boolean>(false);
   const reconnectTimerRef = useRef<number | null>(null);
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
-
+    if (pendingReconnect.current) return;
+    pendingReconnect.current = true;
     try {
       const ws = new WebSocket(WS_URL);
-      wsRef.current = ws;
-
+      const wsId = currentWsId.current + 1;
       ws.onopen = () => {
         console.log("[WS] 已连接");
+        wsRef.current = ws;
+        currentWsId.current = wsId;
+        pendingReconnect.current = false;
         setConnected(true);
         if (reconnectTimerRef.current) {
           clearTimeout(reconnectTimerRef.current);
@@ -66,9 +71,13 @@ export function useWebSocket() {
 
       ws.onclose = () => {
         console.log("[WS] 已断开，准备重连...");
-        setConnected(false);
-        wsRef.current = null;
-        reconnectTimerRef.current = window.setTimeout(connect, RECONNECT_DELAY);
+        if (currentWsId.current === wsId) {
+          setConnected(false);
+          wsRef.current = null;
+          pendingReconnect.current = false;
+          reconnectTimerRef.current = window.setTimeout(connect, RECONNECT_DELAY);
+        }
+        
       };
 
       ws.onerror = () => {

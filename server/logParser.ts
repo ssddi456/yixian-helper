@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import { CardOperation, CardCount, CardLibEntry, BattleLogRound, PlayerInfo } from "./types";
+import { CardOperation, CardEntryFull, CardEntry, CardLibEntry, BattleLogRound, PlayerInfo, CardCount } from "./types";
 
 /**
  * 获取游戏日志路径
@@ -8,16 +8,16 @@ import { CardOperation, CardCount, CardLibEntry, BattleLogRound, PlayerInfo } fr
 export function getGamePath(): string {
   return process.platform === "darwin"
     ? path.join(
-        process.env.HOME || "",
-        "Library/Containers/com.darksun.yixianpai"
-      )
+      process.env.HOME || "",
+      "Library/Containers/com.darksun.yixianpai"
+    )
     : path.join(
-        process.env.USERPROFILE || "",
-        "AppData",
-        "LocalLow",
-        "DarkSunStudio",
-        "YiXianPai"
-      );
+      process.env.USERPROFILE || "",
+      "AppData",
+      "LocalLow",
+      "DarkSunStudio",
+      "YiXianPai"
+    );
 }
 
 /**
@@ -44,17 +44,17 @@ export function parseCardOperationLog(content: string): CardOperation[] | null {
  * 从操作记录计算已从牌库抽出的牌（牌库消耗）
  */
 export function calculateDeckCards(
-  operations: CardOperation[]
-): Record<string, CardCount> {
-  const counts: Record<string, CardCount> = {};
+  operations: CardOperation[],
+  cardData: Record<string, CardDataEntry>,
+): CardCount[] {
+  const counts: Record<string, number> = {};
 
   for (const op of operations) {
     if (op.operation === 0 && op.cards) {
       // 抽牌: 从牌库中取出
       for (const card of op.cards) {
         if (card.name) {
-          if (!counts[card.name]) counts[card.name] = { count: 0 };
-          counts[card.name].count += 1;
+          counts[card.name] = (counts[card.name] || 0) + 1;
         }
       }
     }
@@ -62,60 +62,57 @@ export function calculateDeckCards(
       // 换牌: srcCard 从牌库多消耗, dstCard 从牌库消耗
       if (op.dstCard.name && !op.dstCard.name.includes("梦•")) {
         if (op.srcCard.name) {
-          if (!counts[op.srcCard.name]) counts[op.srcCard.name] = { count: 0 };
-          counts[op.srcCard.name].count += 2;
+          counts[op.srcCard.name] = (counts[op.srcCard.name] || 0) - 1;
         }
         if (op.dstCard.name) {
-          if (!counts[op.dstCard.name])
-            counts[op.dstCard.name] = { count: 0 };
-          counts[op.dstCard.name].count += 1;
+          counts[op.dstCard.name] = (counts[op.dstCard.name] || 0) + 1;
         }
       }
     }
   }
-  return counts;
+
+  const result: CardCount[] = [];
+  for (const [name, count] of Object.entries(counts)) {
+    const level = getCardDataEntryByName(name, cardData)?.phase || 0;
+    result.push({ name, level, count });
+  }
+  return result;
 }
 
 /**
  * 从操作记录计算当前手牌
  */
 export function calculateHandCards(
-  operations: CardOperation[]
-): Record<string, CardCount> {
-  const hand: Record<string, { count: number; rarity: number }> = {};
+  operations: CardOperation[],
+): CardEntry[] {
+  const result: CardEntry[] = [];
 
   for (const op of operations) {
     if (op.operation === 0 && op.cards) {
       for (const card of op.cards) {
         if (card.name) {
-          if (!hand[card.name]) hand[card.name] = { count: 0, rarity: card.rarity || 0 };
-          hand[card.name].count += 1;
-          hand[card.name].rarity = card.rarity || hand[card.name].rarity;
+          result.push({ name: card.name, level: card.level || 0, rarity: card.rarity || 0 });
         }
       }
     }
     if (op.operation === 1) {
       if (op.srcCard.name) {
-        if (!hand[op.srcCard.name]) hand[op.srcCard.name] = { count: 0, rarity: 0 };
-        hand[op.srcCard.name].count -= 1;
+        // 换牌: srcCard 从手牌移除, dstCard 加入手牌
+        result.splice(result.findIndex(c => (
+          c.name === op.srcCard.name && c.level === op.srcCard.level && c.rarity === op.srcCard.rarity
+        )), 1);
       }
       if (op.dstCard.name) {
-        if (!hand[op.dstCard.name]) hand[op.dstCard.name] = { count: 0, rarity: op.dstCard.rarity || 0 };
-        hand[op.dstCard.name].count += 1;
-        hand[op.dstCard.name].rarity = op.dstCard.rarity || hand[op.dstCard.name].rarity;
+        result.push({ name: op.dstCard.name, level: op.dstCard.level || 0, rarity: op.dstCard.rarity || 0 });
       }
     }
     if (op.operation === 2) {
       if (op.srcCard.name) {
-        if (!hand[op.srcCard.name]) hand[op.srcCard.name] = { count: 0, rarity: 0 };
-        hand[op.srcCard.name].count -= 1;
+        result.splice(result.findIndex(c => (
+          c.name === op.srcCard.name && c.level === op.srcCard.level && c.rarity === op.srcCard.rarity
+        )), 1);
       }
     }
-  }
-
-  const result: Record<string, CardCount> = {};
-  for (const [name, info] of Object.entries(hand)) {
-    if (info.count > 0) result[name] = { count: info.count, rarity: info.rarity };
   }
   return result;
 }
@@ -253,7 +250,7 @@ export function readPlayerFromBattleLog(gamePath: string): PlayerInfo | null {
  * 从手牌/牌库中推断角色（通过个人专属牌）
  */
 export function inferCharacterFromCards(
-  cards: Record<string, CardCount>,
+  cards: CardEntryFull[],
   cardLib: Record<string, CardLibEntry>
 ): PlayerInfo | null {
   for (const cardName of Object.keys(cards)) {
@@ -286,7 +283,7 @@ export interface CardStats {
   physique?: number;
   hpCost?: number;
   chargeQi?: number;
-  actionAgain?: boolean;
+  actionAgain?: number;
   otherParams?: number[];
 }
 
@@ -314,13 +311,22 @@ const SIDE_JOB_CATEGORIES = new Set([
   "array-master", "body-forging", "beast-tamer",
 ]);
 
+
+export function getCardDataEntryByName(
+  cardName: string,
+  cardData: Record<string, CardDataEntry>,
+) : CardDataEntry {
+  const normalized = normalizeCardName(cardName);
+  const cd = cardData[cardName] || cardData[normalized];
+  return cd;
+}
 /**
  * 根据手牌信息修正角色检测结果
  * 使用 cardData（protobuf 解析的精确数据）分析手牌中的门派牌、副职牌、角色专属牌和境界
  */
 export function refinePlayerFromCards(
   player: PlayerInfo | null,
-  handCards: Record<string, CardCount>,
+  handCards: CardEntry[],
   cardData: Record<string, CardDataEntry>,
   cardLib: Record<string, CardLibEntry>,
 ): PlayerInfo {
@@ -329,7 +335,8 @@ export function refinePlayerFromCards(
   let detectedCharacter: string | null = null;
   let maxPhase = 0;
 
-  for (const [cardName, info] of Object.entries(handCards)) {
+  for (const card of handCards) {
+    const cardName = card.name;
     const normalized = normalizeCardName(cardName);
     const cd = cardData[cardName] || cardData[normalized];
     const lib = cardLib[cardName] || cardLib[normalized];
@@ -341,12 +348,10 @@ export function refinePlayerFromCards(
     if (phase > maxPhase) maxPhase = phase;
 
     if (type === "sect" && SECT_CATEGORIES.has(category)) {
-      sectCounts[category] = (sectCounts[category] || 0) + info.count;
+      sectCounts[category] = (sectCounts[category] || 0) + 1;
     } else if (type === "side-job" && SIDE_JOB_CATEGORIES.has(category)) {
-      sideJobCounts[category] = (sideJobCounts[category] || 0) + info.count;
+      sideJobCounts[category] = (sideJobCounts[category] || 0) + 1;
     } else if (type === "character" || type === "personal") {
-      // cardData 中 type="character", category 是角色英文名 (如 "JiangXiming")
-      // cardLib 中 type="personal", category 是角色英文名
       if (!detectedCharacter) {
         detectedCharacter = category;
       }

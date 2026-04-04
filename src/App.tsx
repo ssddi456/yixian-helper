@@ -37,14 +37,14 @@ const App: React.FC = () => {
                 onClick={() => setActiveTab("hand")}
               >
                 当前手牌
-                <span className="tab-count">{Object.keys(deckAnalysis.handCards).length}</span>
+                <span className="tab-count">{deckAnalysis.handCards.length}</span>
               </button>
               <button
                 className={`tab-btn ${activeTab === "deck" ? "active" : ""}`}
                 onClick={() => setActiveTab("deck")}
               >
                 牌库消耗
-                <span className="tab-count">{Object.keys(deckAnalysis.deckCards).length}</span>
+                <span className="tab-count">{deckAnalysis.deckCards.length}</span>
               </button>
               <button
                 className={`tab-btn ${activeTab === "sim" ? "active" : ""}`}
@@ -64,10 +64,10 @@ const App: React.FC = () => {
                 <DeckGuidePanel recommendations={deckAnalysis.deckRecommendations || []} />
               )}
               {activeTab === "hand" && (
-                <CardList cards={deckAnalysis.handCards} />
+                <CardList cards={deckAnalysis.handCardCounts} />
               )}
               {activeTab === "deck" && (
-                <CardList cards={deckAnalysis.deckCards} />
+                <CardList cards={deckAnalysis.deckCardCounts} />
               )}
               {activeTab === "sim" && (
                 <BattleSimPanel

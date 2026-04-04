@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import { DeckGuide, DeckRecommendation, CardCount, CardLibEntry, GuideCardEntry } from "./types";
+import { DeckGuide, DeckRecommendation, CardEntry, CardLibEntry, GuideCardEntry } from "./types";
 import { normalizeCardName } from "./logParser";
 
 interface DeckGuidesData {
@@ -79,11 +79,11 @@ function getGuideCardsForPhase(guide: DeckGuide, phase: number): string[] {
 /**
  * 构建玩家卡牌计数表（标准化名称 → 持有数量）
  */
-function buildPlayerCardCounts(playerCards: Record<string, CardCount>): Map<string, number> {
+function buildPlayerCardCounts(playerCards: CardEntry[]): Map<string, number> {
   const counts = new Map<string, number>();
-  for (const [name, card] of Object.entries(playerCards)) {
-    const normalized = normalizeCardName(name);
-    counts.set(normalized, (counts.get(normalized) || 0) + card.count);
+  for (const card of playerCards) {
+    const normalized = normalizeCardName(card.name);
+    counts.set(normalized, (counts.get(normalized) || 0) + 1);
   }
   return counts;
 }
@@ -124,7 +124,7 @@ function computeCoverage(
  * 以持有覆盖度（玩家持有牌覆盖推荐牌组的比例）作为推荐排序指标
  */
 export function recommendDeckGuides(
-  playerCards: Record<string, CardCount>,
+  playerCards: CardEntry[],
   playerSect: string,
   playerPhase: number,
   characterName: string

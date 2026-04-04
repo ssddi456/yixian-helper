@@ -1,5 +1,5 @@
 import React, { useRef } from "react";
-import type { CardCount } from "../types";
+import type { CardEntryFull } from "../types";
 
 const PHASE_NAMES: Record<number, string> = {
   1: "炼气",
@@ -48,21 +48,20 @@ const CHARACTER_NAMES: Record<string, string> = {
 };
 
 interface Props {
-  cards: Record<string, CardCount>;
+  cards: CardEntryFull[];
 }
 
 const CardList: React.FC<Props> = ({ cards }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const entries = Object.entries(cards).sort((a, b) => b[1].count - a[1].count);
 
-  if (entries.length === 0) {
+  if (cards.length === 0) {
     return <div className="card-list-empty">暂无卡牌</div>;
   }
 
   // 按境界分组，未知境界归到 0
-  const groups = new Map<number, [string, CardCount][]>();
-  for (const entry of entries) {
-    const phase = entry[1].phase || 0;
+  const groups = new Map<number, CardEntryFull[]>();
+  for (const entry of cards) {
+    const phase = entry.phase || 0;
     if (!groups.has(phase)) groups.set(phase, []);
     groups.get(phase)!.push(entry);
   }
@@ -107,7 +106,7 @@ const CardList: React.FC<Props> = ({ cards }) => {
               <span className="phase-group-count">{phaseCards.length}张</span>
             </div>
             <div className="card-grid">
-              {phaseCards.map(([name, info]) => {
+              {phaseCards.map((info) => {
                 const cat = info.category || "";
                 const isSect = SECT_CATEGORIES.has(cat);
                 const isSideJob = SIDE_JOB_CATEGORIES.has(cat);
@@ -116,13 +115,12 @@ const CardList: React.FC<Props> = ({ cards }) => {
                 const badgeClass = isSect ? "sect" : isSideJob ? "sidejob" : isCharacter ? "character" : "";
 
                 return (
-                  <div key={name} className="card-item">
+                  <div className="card-item">
                     <div className="card-item-main">
-                      <span className="card-name">{name}</span>
+                      <span className="card-name">{info.name}</span>
                       {badgeLabel && (
                         <span className={`card-badge ${badgeClass}`}>{badgeLabel}</span>
                       )}
-                      <span className="card-count">×{info.count}</span>
                     </div>
                     {info.effect && (
                       <div className="card-effect">{info.effect}</div>

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import type { BattleSimulation, RoundSummary, BattleState, CardCount } from "../types";
+import type { BattleSimulation, RoundSummary, BattleState, CardEntry } from "../types";
 
 const PHASE_NAMES: Record<number, string> = {
   1: "炼气", 2: "筑基", 3: "金丹", 4: "元婴", 5: "化神",
@@ -38,9 +38,19 @@ const EFFECT_ICONS: Record<string, string> = {
   special: "◈",
 };
 
+/** 格式化 buff 显示：名称 +数值 ×次数 */
+function formatBuff(name: string, count: number, values?: Record<string, number>): string {
+  const val = values?.[name];
+  if (val && val > 0) {
+    return count > 1 ? `${name}+${val} ×${count}` : `${name}+${val}`;
+  }
+  return `${name} ×${count}`;
+}
+
 function StateSummary({ state, label }: { state: BattleState; label: string }) {
   const buffEntries = Object.entries(state.selfBuffs).filter(([, v]) => v > 0);
   const debuffEntries = Object.entries(state.enemyDebuffs).filter(([, v]) => v > 0);
+  const hasRealDmg = state.estimatedRealDamage > 0 && state.estimatedRealDamage !== state.totalAttackDamage;
 
   return (
     <div className="sim-summary">
@@ -53,6 +63,13 @@ function StateSummary({ state, label }: { state: BattleState; label: string }) {
             ({state.totalHits}段{state.totalAttackDamage > 0 ? ` ≈${state.totalAttackDamage}伤` : ""})
           </span>
         </div>
+        {hasRealDmg && (
+          <div className="sim-stat">
+            <span className="sim-stat-icon" style={{ color: "var(--red)" }}>💥</span>
+            <span className="sim-stat-value">估算真伤 ≈{state.estimatedRealDamage}</span>
+            <span className="sim-stat-detail">(含加成)</span>
+          </div>
+        )}
         {state.totalDefense > 0 && (
           <div className="sim-stat">
             <span className="sim-stat-icon" style={{ color: "var(--accent-light)" }}>🛡</span>
@@ -114,13 +131,25 @@ function StateSummary({ state, label }: { state: BattleState; label: string }) {
             <span className="sim-stat-value">消耗{state.totalHpCost}生命</span>
           </div>
         )}
+        {state.actionAgainCount > 0 && (
+          <div className="sim-stat">
+            <span className="sim-stat-icon" style={{ color: "var(--accent-light)" }}>🔁</span>
+            <span className="sim-stat-value">{state.actionAgainCount}次额外行动</span>
+          </div>
+        )}
+        {state.chargeQiTotal > 0 && (
+          <div className="sim-stat">
+            <span className="sim-stat-icon" style={{ color: "var(--orange)" }}>🔋</span>
+            <span className="sim-stat-value">蓄灵消耗{state.chargeQiTotal}</span>
+          </div>
+        )}
       </div>
       {buffEntries.length > 0 && (
         <div className="sim-buffs">
           <span className="sim-buff-label">自身增益:</span>
           {buffEntries.map(([name, count]) => (
             <span key={name} className="sim-buff-tag buff">
-              {name} ×{count}
+              {formatBuff(name, count, state.selfBuffValues)}
             </span>
           ))}
         </div>
@@ -130,7 +159,7 @@ function StateSummary({ state, label }: { state: BattleState; label: string }) {
           <span className="sim-buff-label">敌方减益:</span>
           {debuffEntries.map(([name, count]) => (
             <span key={name} className="sim-buff-tag debuff">
-              {name} ×{count}
+              {formatBuff(name, count, state.enemyDebuffValues)}
             </span>
           ))}
         </div>
@@ -142,98 +171,159 @@ function StateSummary({ state, label }: { state: BattleState; label: string }) {
 function RoundDetail({ round, roundNum }: { round: RoundSummary; roundNum: number }) {
   return (
     <div className="sim-round">
-      <div className="sim-round-header">第 {roundNum} 轮手牌 ({round.steps.length} 张)</div>
+      <div className="sim-round-header">第 {roundNum} 轮手牌 ({round.steps.length} 步)</div>
       <div className="sim-steps">
-        {round.steps.map((step, i) => (
-          <div key={i} className="sim-step">
-            <div className="sim-step-index">{i + 1}</div>
-            <div className="sim-step-main">
-              <div className="sim-step-card">
-                <span className="sim-card-name">{step.cardName}</span>
-                {step.cardPhase > 0 && (
-                  <span className="sim-card-phase">
-                    {PHASE_NAMES[step.cardPhase] || `P${step.cardPhase}`}
-                  </span>
-                )}
-              </div>
-              <div className="sim-step-effects">
-                {step.effects.map((effect, j) => (
-                  <span
-                    key={j}
-                    className="sim-effect-tag"
-                    style={{ color: EFFECT_COLORS[effect.type] || "var(--text-muted)" }}
-                    title={effect.description}
-                  >
-                    {EFFECT_ICONS[effect.type] || "◈"} {effect.description || effect.subType}
-                  </span>
-                ))}
+        {round.steps.map((step, i) => {
+          const isReplay = /\(再次行动\)|\(身法\)|\(重复\d+\/\d+\)/.test(step.cardName);
+          return (
+            <div key={i} className={`sim-step ${isReplay ? "sim-step-replay" : ""}`}>
+              <div className="sim-step-index">{i + 1}</div>
+              <div className="sim-step-main">
+                <div className="sim-step-card">
+                  <span className="sim-card-name">{step.cardName}</span>
+                  {step.cardPhase > 0 && (
+                    <span className="sim-card-phase">
+                      {PHASE_NAMES[step.cardPhase] || `P${step.cardPhase}`}
+                    </span>
+                  )}
+                </div>
+                <div className="sim-step-effects">
+                  {step.effects.map((effect, j) => (
+                    <span
+                      key={j}
+                      className="sim-effect-tag"
+                      style={{ color: EFFECT_COLORS[effect.type] || "var(--text-muted)" }}
+                      title={[
+                        effect.description,
+                        effect.multiplier ? `${effect.multiplier}倍加成` : "",
+                        effect.duration ? `持续${effect.duration}回合` : "",
+                        effect.actionAgain ? "再次行动" : "",
+                        effect.chargeQi ? `蓄灵${effect.chargeQi}` : "",
+                      ].filter(Boolean).join(" | ")}
+                    >
+                      {EFFECT_ICONS[effect.type] || "◈"} {effect.description || effect.subType}
+                      {effect.multiplier ? ` (${effect.multiplier}×)` : ""}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       <StateSummary state={round.finalState} label={`第 ${roundNum} 轮结束`} />
     </div>
   );
 }
 
+// ===== 最近牌组缓存 =====
+
+const RECENT_DECKS_KEY = "yixian_sim_recent_decks";
+const RECENT_MAX = 10;
+
+interface RecentDeck {
+  cards: CardEntry[];
+  ts: number;
+}
+
+function deckKey(cards: CardEntry[]): string {
+  return [...cards]
+    .sort((a, b) => a.name.localeCompare(b.name) || a.level - b.level)
+    .map(c => `${c.name}:${c.level}`)
+    .join("|");
+}
+
+function loadRecentDecks(): RecentDeck[] {
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_DECKS_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveRecentDeck(cards: CardEntry[], existing: RecentDeck[]): RecentDeck[] {
+  const key = deckKey(cards);
+  const filtered = existing.filter(d => deckKey(d.cards) !== key);
+  const updated = [{ cards, ts: Date.now() }, ...filtered].slice(0, RECENT_MAX);
+  localStorage.setItem(RECENT_DECKS_KEY, JSON.stringify(updated));
+  return updated;
+}
+
 // ===== 卡牌选择器（逐张选择） =====
 
 interface CardPickerProps {
-  handCards: Record<string, CardCount>;
+  handCards: CardEntry[];
   phase: number;
-  onSimulate: (selectedCards: Record<string, number>) => void;
+  onSimulate: (selectedCards: CardEntry[]) => void;
 }
 
 function CardPicker({ handCards, phase, onSimulate }: CardPickerProps) {
   const deckLimit = getDeckLimit(phase);
 
-  // 按境界排序的卡牌列表
-  const sortedCards = useMemo(() =>
-    Object.entries(handCards)
-      .map(([name, info]) => ({ name, ...info }))
-      .sort((a, b) => (a.phase || 0) - (b.phase || 0)),
-    [handCards]
-  );
-
-  // 上阵牌组：有序数组，每个元素是卡牌名
-  const [slots, setSlots] = useState<string[]>([]);
+  // 上阵槽位：存储 handCards 的索引
+  const [slotIndices, setSlotIndices] = useState<number[]>([]);
+  const [recentDecks, setRecentDecks] = useState<RecentDeck[]>(loadRecentDecks);
+  const [showRecent, setShowRecent] = useState(false);
 
   // 手牌变化时重置
   useEffect(() => {
-    setSlots([]);
+    setSlotIndices([]);
   }, [handCards]);
 
-  // 计算每张卡已选数量
-  const usedCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const name of slots) {
-      counts[name] = (counts[name] || 0) + 1;
-    }
-    return counts;
-  }, [slots]);
+  const usedSet = useMemo(() => new Set(slotIndices), [slotIndices]);
 
-  const isFull = slots.length >= deckLimit;
+  const slots = useMemo(() => slotIndices.map(i => handCards[i]), [slotIndices, handCards]);
 
-  const addCard = (name: string) => {
-    if (isFull) return;
-    const avail = (handCards[name]?.count || 0) - (usedCounts[name] || 0);
-    if (avail <= 0) return;
-    setSlots((prev) => [...prev, name]);
+  const isFull = slotIndices.length >= deckLimit;
+
+  const addCard = (index: number) => {
+    if (isFull || usedSet.has(index)) return;
+    setSlotIndices(prev => [...prev, index]);
   };
 
-  const removeSlot = (index: number) => {
-    setSlots((prev) => prev.filter((_, i) => i !== index));
+  const removeSlot = (slotPos: number) => {
+    setSlotIndices(prev => prev.filter((_, i) => i !== slotPos));
   };
 
-  const clearAll = () => setSlots([]);
+  const clearAll = () => setSlotIndices([]);
 
   const handleSimulate = () => {
-    const counts: Record<string, number> = {};
-    for (const name of slots) {
-      counts[name] = (counts[name] || 0) + 1;
+    if (slots.length === 0) return;
+    setRecentDecks(prev => saveRecentDeck(slots, prev));
+    onSimulate(slots);
+  };
+
+  /** 从历史牌组中找到在当前手牌里匹配的索引 */
+  const loadDeck = (cards: CardEntry[]) => {
+    const used = new Set<number>();
+    const indices: number[] = [];
+    for (const target of cards) {
+      for (let i = 0; i < handCards.length; i++) {
+        if (!used.has(i) && handCards[i].name === target.name) {
+          used.add(i);
+          indices.push(i);
+          break;
+        }
+      }
     }
-    onSimulate(counts);
+    setSlotIndices(indices.slice(0, deckLimit));
+    setShowRecent(false);
+  };
+
+  /** 统计历史牌组中在当前手牌可以载入的张数 */
+  const countAvailable = (cards: CardEntry[]): number => {
+    const used = new Set<number>();
+    let count = 0;
+    for (const target of cards) {
+      for (let i = 0; i < handCards.length; i++) {
+        if (!used.has(i) && handCards[i].name === target.name) {
+          used.add(i);
+          count++;
+          break;
+        }
+      }
+    }
+    return count;
   };
 
   return (
@@ -241,7 +331,7 @@ function CardPicker({ handCards, phase, onSimulate }: CardPickerProps) {
       <div className="picker-header">
         <span className="picker-title">上阵牌组</span>
         <span className="picker-limit">
-          {slots.length} / {deckLimit}
+          {slotIndices.length} / {deckLimit}
           <span className="picker-phase-hint">（{PHASE_NAMES[phase] || `P${phase}`}）</span>
         </span>
       </div>
@@ -249,21 +339,20 @@ function CardPicker({ handCards, phase, onSimulate }: CardPickerProps) {
       {/* 上阵槽位 */}
       <div className="picker-slots">
         {Array.from({ length: deckLimit }, (_, i) => {
-          const cardName = slots[i];
-          const cardInfo = cardName ? (handCards[cardName] || null) : null;
+          const card = slots[i];
           return (
             <div
               key={i}
-              className={`picker-slot ${cardName ? "filled" : "empty"} ${i === slots.length ? "next" : ""}`}
-              onClick={() => cardName && removeSlot(i)}
-              title={cardName ? `点击移除 ${cardName}` : `第 ${i + 1} 张`}
+              className={`picker-slot ${card ? "filled" : "empty"} ${i === slotIndices.length ? "next" : ""}`}
+              onClick={() => card && removeSlot(i)}
+              title={card ? `点击移除 ${card.name}` : `第 ${i + 1} 张`}
             >
               <span className="slot-index">{i + 1}</span>
-              {cardName ? (
+              {card ? (
                 <>
-                  <span className="slot-name">{cardName}</span>
-                  {cardInfo?.phase != null && cardInfo.phase > 0 && (
-                    <span className="slot-phase">{PHASE_NAMES[cardInfo.phase] || `P${cardInfo.phase}`}</span>
+                  <span className="slot-name">{card.name}</span>
+                  {card.phase != null && card.phase > 0 && (
+                    <span className="slot-phase">{PHASE_NAMES[card.phase] || `P${card.phase}`}</span>
                   )}
                   <span className="slot-remove">×</span>
                 </>
@@ -277,36 +366,68 @@ function CardPicker({ handCards, phase, onSimulate }: CardPickerProps) {
 
       {/* 操作按钮 */}
       <div className="picker-actions">
-        <button className="picker-btn" onClick={clearAll} disabled={slots.length === 0}>清空</button>
+        <button className="picker-btn" onClick={clearAll} disabled={slotIndices.length === 0}>清空</button>
+        {recentDecks.length > 0 && (
+          <button
+            className={`picker-btn picker-recent-btn ${showRecent ? "active" : ""}`}
+            onClick={() => setShowRecent(v => !v)}
+          >
+            最近牌组 ({recentDecks.length})
+          </button>
+        )}
         <button
           className="picker-btn picker-sim-btn"
-          disabled={slots.length === 0}
+          disabled={slotIndices.length === 0}
           onClick={handleSimulate}
         >
           模拟战斗
         </button>
       </div>
 
-      {/* 手牌列表（点击添加） */}
+      {/* 最近提交的牌组列表 */}
+      {showRecent && (
+        <div className="picker-recent">
+          <div className="picker-recent-label">最近牌组（点击载入）</div>
+          {recentDecks.map((deck, di) => {
+            const avail = countAvailable(deck.cards);
+            const total = deck.cards.length;
+            return (
+              <div
+                key={di}
+                className={`picker-recent-item ${avail === 0 ? "unavailable" : ""}`}
+                onClick={() => avail > 0 && loadDeck(deck.cards)}
+                title={avail < total ? `当前手牌仅含 ${avail}/${total} 张` : deck.cards.map(c => c.name).join("、")}
+              >
+                <span className="picker-recent-cards">
+                  {deck.cards.map(c => c.name).join(" · ")}
+                </span>
+                <span className={`picker-recent-avail ${avail < total ? "partial" : ""}`}>
+                  {avail}/{total}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* 手牌列表（点击添加，逐张展示） */}
       {!isFull && (
         <div className="picker-hand">
-          <div className="picker-hand-label">点击添加第 {slots.length + 1} 张牌：</div>
+          <div className="picker-hand-label">点击添加第 {slotIndices.length + 1} 张牌：</div>
           <div className="picker-hand-cards">
-            {sortedCards.map((card) => {
-              const remaining = card.count - (usedCounts[card.name] || 0);
-              const disabled = remaining <= 0;
+            {handCards.map((card, index) => {
+              const disabled = usedSet.has(index);
               return (
                 <button
-                  key={card.name}
+                  key={index}
                   className={`picker-hand-card ${disabled ? "exhausted" : ""}`}
-                  onClick={() => !disabled && addCard(card.name)}
+                  onClick={() => !disabled && addCard(index)}
                   disabled={disabled}
                 >
                   <span className="picker-hc-name">{card.name}</span>
                   {card.phase != null && card.phase > 0 && (
                     <span className="picker-hc-phase">{PHASE_NAMES[card.phase] || `P${card.phase}`}</span>
                   )}
-                  <span className="picker-hc-remain">×{remaining}</span>
                 </button>
               );
             })}
@@ -320,16 +441,16 @@ function CardPicker({ handCards, phase, onSimulate }: CardPickerProps) {
 // ===== 主面板 =====
 
 interface Props {
-  handCards: Record<string, CardCount>;
+  handCards: CardEntry[];
   phase: number;
   simulation: BattleSimulation | null;
-  onSimulate: (selectedCards: Record<string, number>) => void;
+  onSimulate: (selectedCards: CardEntry[]) => void;
 }
 
 const BattleSimPanel: React.FC<Props> = ({ handCards, phase, simulation, onSimulate }) => {
   const [showRound, setShowRound] = useState<1 | 2>(1);
 
-  const hasCards = Object.keys(handCards).length > 0;
+  const hasCards = handCards.length > 0;
 
   if (!hasCards) {
     return (
@@ -342,29 +463,28 @@ const BattleSimPanel: React.FC<Props> = ({ handCards, phase, simulation, onSimul
   return (
     <div className="sim-panel">
       <CardPicker handCards={handCards} phase={phase} onSimulate={onSimulate} />
-
-      {simulation && simulation.handCardNames.length > 0 && (
-        <>
-          <div className="sim-round-toggle">
-            <button
-              className={`sim-toggle-btn ${showRound === 1 ? "active" : ""}`}
-              onClick={() => setShowRound(1)}
-            >
-              第1轮
-            </button>
-            <button
-              className={`sim-toggle-btn ${showRound === 2 ? "active" : ""}`}
-              onClick={() => setShowRound(2)}
-            >
-              第2轮 (累计)
-            </button>
-          </div>
-          <RoundDetail
-            round={showRound === 1 ? simulation.round1 : simulation.round2}
-            roundNum={showRound}
-          />
-        </>
-      )}
+        {simulation && (
+          <>
+            <div className="sim-round-toggle">
+              <button
+                className={`sim-toggle-btn ${showRound === 1 ? "active" : ""}`}
+                onClick={() => setShowRound(1)}
+              >
+                第1轮
+              </button>
+              <button
+                className={`sim-toggle-btn ${showRound === 2 ? "active" : ""}`}
+                onClick={() => setShowRound(2)}
+              >
+                第2轮 (累计)
+              </button>
+            </div>
+            <RoundDetail
+              round={showRound === 1 ? simulation.round1 : simulation.round2}
+              roundNum={showRound}
+            />
+          </>
+        )}
     </div>
   );
 };
