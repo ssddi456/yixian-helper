@@ -18,7 +18,7 @@ function getDeckKey(cards: { name: string; level: number }[]): string {
  * 结果按牌组指纹缓存，相同牌组重复提交时直接返回缓存。
  */
 export function handleSimulateBattle(
-  selectedCards: { name: string; level: number }[],
+  selectedCards: CardEntry[],
 ): BattleResultData {
   const cacheKey = getDeckKey(selectedCards);
 
@@ -28,17 +28,12 @@ export function handleSimulateBattle(
     return cached;
   }
 
-  const simCards: CardEntry[] = selectedCards.map(c => ({
-    name: c.name,
-    level: c.level,
-  }));
-
   const cardData = getCardData();
-  const battleSimulation = simulateBattle(simCards, cardData);
+  const battleSimulation = simulateBattle(selectedCards, cardData);
   const deckTraits = inferDeckTraits(battleSimulation);
   const counterAnalysis = analyzeCounters(deckTraits);
 
-  console.log(`[SimulateBattle] 战斗模拟: ${simCards.map(c => c.name).join(", ")}`);
+  console.log(`[SimulateBattle] 战斗模拟: ${selectedCards.map(c => c.name).join(", ")}`);
 
   const result: BattleResultData = { battleSimulation, counterAnalysis };
 

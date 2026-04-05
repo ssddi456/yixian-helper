@@ -227,7 +227,7 @@ interface RecentDeck {
 }
 
 function deckKey(cards: CardEntry[]): string {
-  return [...cards]
+  return cards.filter(c => c)
     .sort((a, b) => a.name.localeCompare(b.name) || a.level - b.level)
     .map(c => `${c.name}:${c.level}`)
     .join("|");
@@ -261,13 +261,13 @@ function CardPicker({ handCards, phase, onSimulate }: CardPickerProps) {
   const deckLimit = getDeckLimit(phase);
 
   // 上阵槽位：存储 handCards 的索引
-  const [slotIndices, setSlotIndices] = useState<number[]>([]);
+  const [slotIndices, setSlotIndices] = useState<number[]>(Array(deckLimit).fill(-1));
   const [recentDecks, setRecentDecks] = useState<RecentDeck[]>(loadRecentDecks);
   const [showRecent, setShowRecent] = useState(false);
 
   // 手牌变化时重置
   useEffect(() => {
-    setSlotIndices([]);
+    setSlotIndices(Array(deckLimit).fill(-1));
   }, [handCards]);
 
   const usedSet = useMemo(() => new Set(slotIndices), [slotIndices]);
@@ -290,18 +290,30 @@ function CardPicker({ handCards, phase, onSimulate }: CardPickerProps) {
   const handleSimulate = () => {
     if (slots.length === 0) return;
     setRecentDecks(prev => saveRecentDeck(slots, prev));
-    onSimulate(slots);
+    const realCards = slotIndices.map(i => {
+      const c = handCards[i];
+      if (c) {
+        return c;
+      }
+      return {
+        name: "普通攻击",
+        level: 0,
+        rarity: 0,
+      }
+    });
+    onSimulate(realCards);
   };
 
   /** 从历史牌组中找到在当前手牌里匹配的索引 */
   const loadDeck = (cards: CardEntry[]) => {
     const used = new Set<number>();
-    const indices: number[] = [];
-    for (const target of cards) {
+    const indices: number[] = Array(deckLimit).fill(-1);
+    for (let j = 0; j < cards.length; j++) {
+      const target = cards[j];
       for (let i = 0; i < handCards.length; i++) {
         if (!used.has(i) && handCards[i].name === target.name) {
           used.add(i);
-          indices.push(i);
+          indices[j] = i;
           break;
         }
       }
@@ -331,7 +343,7 @@ function CardPicker({ handCards, phase, onSimulate }: CardPickerProps) {
       <div className="picker-header">
         <span className="picker-title">上阵牌组</span>
         <span className="picker-limit">
-          {slotIndices.length} / {deckLimit}
+          {slotIndices.filter(x => x !== -1).length} / {deckLimit}
           <span className="picker-phase-hint">（{PHASE_NAMES[phase] || `P${phase}`}）</span>
         </span>
       </div>
@@ -351,8 +363,8 @@ function CardPicker({ handCards, phase, onSimulate }: CardPickerProps) {
               {card ? (
                 <>
                   <span className="slot-name">{card.name}</span>
-                  {card.phase != null && card.phase > 0 && (
-                    <span className="slot-phase">{PHASE_NAMES[card.phase] || `P${card.phase}`}</span>
+                  {card.level != null && card.level > 0 && (
+                    <span className="slot-phase">{PHASE_NAMES[card.level] || `P${card.level}`}</span>
                   )}
                   <span className="slot-remove">×</span>
                 </>
@@ -425,8 +437,8 @@ function CardPicker({ handCards, phase, onSimulate }: CardPickerProps) {
                   disabled={disabled}
                 >
                   <span className="picker-hc-name">{card.name}</span>
-                  {card.phase != null && card.phase > 0 && (
-                    <span className="picker-hc-phase">{PHASE_NAMES[card.phase] || `P${card.phase}`}</span>
+                  {card.level != null && card.level > 0 && (
+                    <span className="picker-hc-phase">{PHASE_NAMES[card.level] || `P${card.level}`}</span>
                   )}
                 </button>
               );

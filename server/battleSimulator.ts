@@ -92,7 +92,6 @@ export function parseCardEffects(effectRaw: string, stats?: CardStats): CardEffe
   const randomAttack = stats?.randomAttack ?? 0;
   const randomDef = stats?.randomDef ?? 0;
   const otherParams = stats?.otherParams ?? [];
-  const actionAgain = stats?.actionAgain ?? 0;
   const chargeQi = stats?.chargeQi ?? 0;
 
   for (const [lineIndex, line] of lines.entries()) {
@@ -238,7 +237,7 @@ export function parseCardEffects(effectRaw: string, stats?: CardStats): CardEffe
     }
 
     // 再次行动
-    if (/再次行动/.test(line)) {
+    if (/\[再次行动\]/.test(line)) {
       pushEffect({
         type: "special",
         subType: "再次行动",
@@ -249,7 +248,7 @@ export function parseCardEffects(effectRaw: string, stats?: CardStats): CardEffe
     }
 
     // 持续效果（不是再次行动的持续）
-    if (/\[?持续\]?/.test(line) && !/再次行动/.test(line)) {
+    if (/\[持续\]/.test(line)) {
       pushEffect({
         type: "continuous",
         subType: "持续",
@@ -309,17 +308,6 @@ export function parseCardEffects(effectRaw: string, stats?: CardStats): CardEffe
         }, lineIndex);
       }
     }
-  }
-
-  // actionAgain 标志（即使 effectRaw 中没有明确写"再次行动"）
-  if (actionAgain > 0 && !effects.some(e => e.actionAgain)) {
-    effects.push({
-      type: "special",
-      subType: "再次行动",
-      target: "self",
-      description: "再次行动",
-      actionAgain: 1,
-    });
   }
 
   // chargeQi 蓄灵消耗
@@ -408,10 +396,10 @@ function cloneState(state: BattleState): BattleState {
 /**
  * 获取卡牌在指定稀有度下的数值
  */
-function getCardStats(cd: CardDataEntry | undefined, level: number): CardStats | undefined {
+function getCardStats(cd: CardDataEntry | undefined, rarity: number): CardStats | undefined {
   if (!cd?.stats) return undefined;
   // 尝试精确匹配，回退到 level 0
-  return cd.stats[level.toString()] ?? cd.stats["0"];
+  return cd.stats[rarity.toString()] ?? cd.stats["0"];
 }
 
 /**
@@ -509,14 +497,14 @@ function calculateEstimatedDamage(state: BattleState, allEffects: CardEffect[]):
 function playCard(
   cardName: string,
   cd: CardDataEntry | undefined,
-  level: number,
+  rarity: number,
   currentState: BattleState,
   steps: SimulationStep[],
   allEffects: CardEffect[],
   label?: string,
 ): { state: BattleState; effects: CardEffect[] } {
   const effectRaw = cd?.effectRaw || "";
-  const stats = getCardStats(cd, level);
+  const stats = getCardStats(cd, rarity);
   const effects = parseCardEffects(effectRaw, stats);
   return playResolvedEffects(cardName, cd?.phase || 0, effects, currentState, steps, allEffects, label);
 }
@@ -567,7 +555,7 @@ function tryShenFaAction(state: BattleState): boolean {
  * 4. 如果卡牌有"重复使用xN次"状态效果，额外执行 N 次效果
  */
 function simulateRound(
-  handCardEntries: { name: string; level: number }[],
+  handCardEntries: CardEntry[],
   cardData: Record<string, CardDataEntry>,
   initialState: BattleState,
 ): RoundSummary {
@@ -576,11 +564,13 @@ function simulateRound(
   const allEffects: CardEffect[] = [];
   
   for (let index = 0; index < handCardEntries.length; index++) {
-    ({ currentState } = singleCardMove(handCardEntries, index, cardData, currentState, steps, allEffects));
+    const entry = handCardEntries[index];
+    ({ currentState } = singleCardMove(entry, cardData, currentState, steps, allEffects));
     if (currentState.actionAgainCount) {
-      ({ currentState } = singleCardMove(handCardEntries, index, cardData, currentState, steps, allEffects));
-      currentState.actionAgainCount = 0;
       index += 1;
+      const nextEntry = handCardEntries[index];
+      ({ currentState } = singleCardMove(nextEntry, cardData, currentState, steps, allEffects));
+      currentState.actionAgainCount = 0;
     }
   }
 
@@ -590,12 +580,11 @@ function simulateRound(
   return { steps, finalState: currentState };
 }
 
-function singleCardMove(handCardEntries: { name: string; level: number; }[], index: number, cardData: Record<string, CardDataEntry>, currentState: BattleState, steps: SimulationStep[], allEffects: CardEffect[]) {
-  const entry = handCardEntries[index];
+function singleCardMove(entry: CardEntry, cardData: Record<string, CardDataEntry>, currentState: BattleState, steps: SimulationStep[], allEffects: CardEffect[]) {
   const cd = cardData[entry.name];
 
   // 正常打出
-  const result = playCard(entry.name, cd, entry.level, currentState, steps, allEffects);
+  const result = playCard(entry.name, cd, entry.rarity, currentState, steps, allEffects);
   currentState = result.state;
   const effects = result.effects;
 
