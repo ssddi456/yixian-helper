@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import type { GameStatus, ClientWSMessage } from "../types";
+import type { GameStatus, GameConnectionStatus, ClientWSMessage } from "../types";
 
 const SECT_NAMES: Record<string, string> = {
   "cloud-spirit": "云灵剑宗",
@@ -56,10 +56,11 @@ const SIDE_JOB_LIST = Object.entries(SIDE_JOB_NAMES);
 interface Props {
   connected: boolean;
   gameStatus: GameStatus;
+  gameConnectionStatus: GameConnectionStatus;
   onSendMessage: (msg: ClientWSMessage) => void;
 }
 
-const StatusBar: React.FC<Props> = ({ connected, gameStatus, onSendMessage }) => {
+const StatusBar: React.FC<Props> = ({ connected, gameStatus, gameConnectionStatus, onSendMessage }) => {
   const [editing, setEditing] = useState(false);
   const player = gameStatus.player;
 
@@ -113,11 +114,20 @@ const StatusBar: React.FC<Props> = ({ connected, gameStatus, onSendMessage }) =>
   }
 
   if (!player || gameStatus.status !== "in_game") {
+    const { gameRunning, serverAddr, serverPort, connectionCount } = gameConnectionStatus;
+    const serverInfo = serverAddr
+      ? `${serverAddr}:${serverPort} (${connectionCount} 连接)`
+      : gameRunning
+        ? "检测中..."
+        : "游戏未启动";
+    const indicatorColor = gameRunning && serverAddr ? "#4caf50" : gameRunning ? "#ff9800" : "#9e9e9e";
     return (
       <div className="status-bar">
         <div className="status-left">
-          <div className="status-indicator" style={{ backgroundColor: "#ff9800" }} />
-          <span className="status-text">等待对局...</span>
+          <div className="status-indicator" style={{ backgroundColor: indicatorColor }} />
+          <span className="status-text">{gameRunning ? "等待对局..." : "等待游戏启动..."}</span>
+          <span className="info-divider">·</span>
+          <span className="status-game-conn">{serverInfo}</span>
         </div>
         <span className="status-connection">● 已连接</span>
       </div>

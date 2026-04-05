@@ -96,6 +96,11 @@ body {
   color: var(--text-secondary);
 }
 
+.status-game-conn {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
 .player-name {
   color: var(--accent-light);
   font-weight: 700;

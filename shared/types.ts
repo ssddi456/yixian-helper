@@ -191,13 +191,22 @@ export interface PlayerOverride {
   sideJobs?: string[];      // 副职列表
 }
 
+export interface GameConnectionStatus {
+  gameRunning: boolean;
+  pid?: number;
+  serverAddr?: string;
+  serverPort?: number;
+  connectionCount?: number;
+}
+
 // WebSocket 消息类型
 export type WSMessage =
   | { type: "game_status"; data: GameStatus }
   | { type: "deck_analysis"; data: FullAnalysis }
   | { type: "battle_result"; data: BattleResultData }
   | { type: "version"; data: { version: string } }
-  | { type: "error"; data: { message: string } };
+  | { type: "error"; data: { message: string } }
+  | { type: "game_connection_status"; data: GameConnectionStatus };
 
 export type ClientWSMessage =
   | { type: "set_player_override"; data: PlayerOverride }

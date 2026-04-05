@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import type { WSMessage, GameStatus, FullAnalysis, ClientWSMessage, BattleResultData } from "../types";
+import type { WSMessage, GameStatus, FullAnalysis, ClientWSMessage, BattleResultData, GameConnectionStatus } from "../types";
 
 const WS_URL = "ws://localhost:12681";
 const RECONNECT_DELAY = 3000;
@@ -13,6 +13,7 @@ export function useWebSocket() {
     inGame: false,
     status: "waiting",
   });
+  const [gameConnectionStatus, setGameConnectionStatus] = useState<GameConnectionStatus>({ gameRunning: false });
   const [deckAnalysis, setDeckAnalysis] = useState<FullAnalysis | null>(null);
   const [battleResult, setBattleResult] = useState<BattleResultData | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -45,6 +46,9 @@ export function useWebSocket() {
           switch (msg.type) {
             case "game_status":
               setGameStatus(msg.data);
+              break;
+            case "game_connection_status":
+              setGameConnectionStatus(msg.data);
               break;
             case "deck_analysis":
               setDeckAnalysis(msg.data);
@@ -102,5 +106,5 @@ export function useWebSocket() {
     };
   }, [connect]);
 
-  return { connected, gameStatus, deckAnalysis, battleResult, sendMessage };
+  return { connected, gameStatus, gameConnectionStatus, deckAnalysis, battleResult, sendMessage };
 }

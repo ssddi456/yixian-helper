@@ -10,7 +10,7 @@ import "./App.css";
 type TabKey = "guide" | "hand" | "deck" | "sim" | "counter";
 
 const App: React.FC = () => {
-  const { connected, gameStatus, deckAnalysis, battleResult, sendMessage } = useWebSocket();
+  const { connected, gameStatus, gameConnectionStatus, deckAnalysis, battleResult, sendMessage } = useWebSocket();
   const [activeTab, setActiveTab] = useState<TabKey>("guide");
 
   return (
@@ -19,7 +19,7 @@ const App: React.FC = () => {
         <h1>弈仙牌 · 对局辅助</h1>
       </header>
 
-      <StatusBar connected={connected} gameStatus={gameStatus} onSendMessage={sendMessage} />
+      <StatusBar connected={connected} gameStatus={gameStatus} gameConnectionStatus={gameConnectionStatus} onSendMessage={sendMessage} />
 
       <main className="app-main">
         {gameStatus.status === "in_game" && deckAnalysis ? (

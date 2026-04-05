@@ -4,7 +4,8 @@ import * as fs from "fs";
 import * as path from "path";
 import { startLogWatcher, getCurrentState, setPlayerOverride } from "./logWatcher";
 import { handleSimulateBattle } from "./simulateBattleHandler";
-import { WSMessage, ClientWSMessage } from "./types";
+import { WSMessage, ClientWSMessage, GameConnectionStatus } from "./types";
+import { findGamePid, probeGameServer } from "./networkProbe";
 
 const PORT = 12680;
 const WS_PORT = 12681;
@@ -66,6 +67,9 @@ wss.on("connection", (ws) => {
   // 发送版本号
   ws.send(JSON.stringify({ type: "version", data: { version: SERVER_VERSION } }));
 
+  // 发送当前游戏连接状态
+  ws.send(JSON.stringify({ type: "game_connection_status", data: lastConnectionStatus }));
+
   // 发送当前状态给新连接
   const currentState = getCurrentState();
   for (const msg of currentState) {
@@ -113,7 +117,93 @@ function broadcastMessage(msg: WSMessage) {
   }
 }
 
-// ========= 启动 =========
+// ========= 游戏连接监控 =========
+let lastConnectionStatus: GameConnectionStatus = { gameRunning: false };
+
+/**
+ * 启动游戏连接监控：
+ * - 轮询检测游戏进程和服务器连接
+ * - 游戏启动后广播连接信息
+ * - 游戏退出后广播离线状态并停止轮询
+ */
+function startGameConnectionMonitor(intervalMs = 3000): void {
+  let timer: ReturnType<typeof setInterval> | null = null;
+  let wasRunning = false;
+
+  function poll() {
+    const pid = findGamePid();
+
+    if (!pid) {
+      if (wasRunning) {
+        // 游戏刚退出 → 广播离线并停止轮询
+        wasRunning = false;
+        lastConnectionStatus = { gameRunning: false };
+        broadcastMessage({ type: "game_connection_status", data: lastConnectionStatus });
+        console.log("[GameMonitor] 游戏已退出，停止连接监控");
+        if (timer !== null) {
+          clearInterval(timer);
+          timer = null;
+        }
+        // 游戏退出后重新等待游戏启动
+        scheduleWaitForGame();
+      }
+      return;
+    }
+
+    // 游戏在运行
+    const info = probeGameServer();
+    const status: GameConnectionStatus = {
+      gameRunning: true,
+      pid,
+      serverAddr: info?.serverAddr,
+      serverPort: info?.serverPort,
+      connectionCount: info?.connections.length ?? 0,
+    };
+
+    // 仅在状态发生变化时广播
+    if (
+      !wasRunning ||
+      status.serverAddr !== lastConnectionStatus.serverAddr ||
+      status.serverPort !== lastConnectionStatus.serverPort ||
+      status.connectionCount !== lastConnectionStatus.connectionCount
+    ) {
+      lastConnectionStatus = status;
+      broadcastMessage({ type: "game_connection_status", data: status });
+      if (!wasRunning) {
+        console.log(`[GameMonitor] 检测到游戏进程 PID=${pid}，开始监控连接`);
+      }
+    }
+
+    wasRunning = true;
+  }
+
+  function scheduleWaitForGame() {
+    console.log("[GameMonitor] 等待游戏启动...");
+    timer = setInterval(() => {
+      const pid = findGamePid();
+      if (pid) {
+        // 游戏启动了，切换到连接监控模式
+        clearInterval(timer!);
+        timer = null;
+        wasRunning = false;
+        poll();
+        timer = setInterval(poll, intervalMs);
+      }
+    }, intervalMs);
+  }
+
+  // 立即检查一次
+  const pid = findGamePid();
+  if (pid) {
+    wasRunning = false;
+    poll();
+    timer = setInterval(poll, intervalMs);
+  } else {
+    scheduleWaitForGame();
+  }
+}
+
+
 httpServer.listen(PORT, () => {
   console.log(`[Server] HTTP 服务器运行在 http://localhost:${PORT}`);
 });
@@ -122,5 +212,8 @@ console.log(`[Server] WebSocket 服务器运行在 ws://localhost:${WS_PORT}`);
 
 // 启动日志监听
 startLogWatcher(broadcastMessage);
+
+// 启动游戏连接监控
+startGameConnectionMonitor();
 
 console.log("[Server] 弈仙牌对局辅助已启动");
